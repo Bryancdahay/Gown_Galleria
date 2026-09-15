@@ -1,0 +1,67 @@
+import { getAuditTrail, getUsers } from "../data/catalog";
+
+function AuditReportPage() {
+    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    const auditTrail = getAuditTrail(currentUser?.role);
+    const users = getUsers();
+
+    const grouped = auditTrail.reduce((acc, entry) => {
+        acc[entry.action] = (acc[entry.action] || 0) + 1;
+        return acc;
+    }, {});
+
+    return (
+        <main className="mx-auto max-w-7xl px-6 py-16">
+            <div className="mb-8">
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-pink-600">
+                    {currentUser?.role === "super-admin" ? "Super admin" : "Shop admin"}
+                </p>
+                <h1 className="mt-2 text-4xl font-bold text-gray-900">
+                    Audit report
+                </h1>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-3">
+                <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+                    <p className="text-sm text-gray-500">Total users</p>
+                    <p className="mt-3 text-3xl font-bold text-gray-900">
+                        {users.length}
+                    </p>
+                </div>
+
+                <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+                    <p className="text-sm text-gray-500">Audit entries</p>
+                    <p className="mt-3 text-3xl font-bold text-gray-900">
+                        {auditTrail.length}
+                    </p>
+                </div>
+
+                <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+                    <p className="text-sm text-gray-500">Actions logged</p>
+                    <p className="mt-3 text-3xl font-bold text-pink-600">
+                        {Object.keys(grouped).length}
+                    </p>
+                </div>
+            </div>
+
+            <div className="mt-10 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+                <h2 className="text-xl font-bold text-gray-900">Summary by action</h2>
+
+                <div className="mt-6 space-y-4">
+                    {Object.entries(grouped).map(([action, count]) => (
+                        <div key={action} className="rounded-2xl bg-gray-50 p-4">
+                            <div className="flex items-center justify-between">
+                                <span className="font-semibold text-gray-900">
+                                    {action}
+                                </span>
+                                <span className="text-sm text-gray-500">{count} events</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </main>
+    );
+}
+
+export default AuditReportPage;
