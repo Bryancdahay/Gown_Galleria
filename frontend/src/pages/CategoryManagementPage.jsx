@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import {
     addAuditEntry,
     deleteCategory,
     getCategories,
+    getCurrentShop,
     upsertCategory,
 } from "../data/catalog";
 import { showToast } from "../utils/toast";
@@ -16,25 +17,17 @@ const emptyCategory = {
 };
 
 function CategoryManagementPage() {
-    const [categories, setCategories] = useState([]);
+    const [categories, setCategories] = useState(() => {
+        const currentShop = getCurrentShop();
+        return getCategories().filter(
+            (category) => currentShop && category.shopId === currentShop.id
+        );
+    });
     const [form, setForm] = useState(emptyCategory);
     const [editingId, setEditingId] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [deleteCandidate, setDeleteCandidate] = useState(null);
     const [imagePreview, setImagePreview] = useState("");
-
-    useEffect(() => {
-        setCategories(getCategories());
-    }, []);
-
-    const categoryOptions = useMemo(
-        () =>
-            categories.map((category) => ({
-                id: category.id,
-                label: category.title,
-            })),
-        [categories]
-    );
 
     function handleChange(event) {
         const { name, value } = event.target;
@@ -72,6 +65,7 @@ function CategoryManagementPage() {
             return;
         }
 
+        const currentShop = getCurrentShop();
         const nextCategory = {
             ...form,
             id: editingId || `category-${Date.now()}`,
@@ -83,10 +77,15 @@ function CategoryManagementPage() {
             title: form.title.trim(),
             description: form.description.trim(),
             image: form.image || "",
+            shopId: form.shopId || currentShop?.id,
         };
 
         const updatedCategories = upsertCategory(nextCategory);
-        setCategories(updatedCategories);
+        setCategories(
+            currentShop
+                ? updatedCategories.filter((category) => category.shopId === currentShop.id)
+                : []
+        );
         addAuditEntry(
             editingId ? "Updated category" : "Added category",
             `${nextCategory.title} was ${editingId ? "updated" : "added"}.`
@@ -131,7 +130,12 @@ function CategoryManagementPage() {
         }
 
         const updatedCategories = deleteCategory(deleteCandidate.id);
-        setCategories(updatedCategories);
+        const currentShop = getCurrentShop();
+        setCategories(
+            currentShop
+                ? updatedCategories.filter((category) => category.shopId === currentShop.id)
+                : []
+        );
         addAuditEntry(
             "Deleted category",
             `${deleteCandidate.title || "Category"} was deleted.`
@@ -198,7 +202,7 @@ function CategoryManagementPage() {
                                     <button
                                         type="button"
                                         onClick={() => handleDelete(category)}
-                                        className="rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-600"
+                                        className="rounded-lg bg-pink-50 px-3 py-2 text-sm font-semibold text-pink-600"
                                     >
                                         Delete
                                     </button>
@@ -210,8 +214,8 @@ function CategoryManagementPage() {
             </div>
 
             {isFormOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4">
-                    <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
+                <div className="modal-overlay z-50 bg-gray-900/50">
+                    <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-2xl">
                         <div className="mb-4 flex items-center justify-between">
                             <h2 className="text-xl font-bold text-gray-900">
                                 {editingId ? "Edit category" : "Add category"}
@@ -225,7 +229,7 @@ function CategoryManagementPage() {
                             </button>
                         </div>
 
-                        <div className="max-h-[70vh] overflow-y-auto pr-1">
+                        <div className="min-h-0 overflow-y-auto pr-1">
                             <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -248,7 +252,7 @@ function CategoryManagementPage() {
                                     name="slug"
                                     value={form.slug}
                                     onChange={handleChange}
-                                    placeholder="e.g. bridal"
+                                    placeholder="Category slug"
                                     className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500"
                                 />
                             </div>
@@ -308,7 +312,7 @@ function CategoryManagementPage() {
             )}
 
             {deleteCandidate && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4">
+                <div className="modal-overlay z-50 bg-gray-900/50">
                     <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl text-center">
                         <h3 className="text-xl font-bold text-gray-900">
                             Delete category?
@@ -328,7 +332,7 @@ function CategoryManagementPage() {
                             <button
                                 type="button"
                                 onClick={confirmDelete}
-                                className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700"
+                                className="rounded-lg bg-pink-600 px-4 py-2 font-semibold text-white hover:bg-pink-700"
                             >
                                 Delete
                             </button>

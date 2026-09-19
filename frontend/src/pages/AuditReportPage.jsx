@@ -1,9 +1,24 @@
-import { getAuditTrail, getUsers } from "../data/catalog";
+import {
+    getAuditTrail,
+    getCurrentShop,
+    getProducts,
+    getUsers,
+} from "../data/catalog";
 
 function AuditReportPage() {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-    const auditTrail = getAuditTrail(currentUser?.role);
+    const currentShop = getCurrentShop();
+    const auditTrail = currentShop
+        ? getAuditTrail("shop-admin", currentShop.id)
+        : currentUser?.role === "shop-admin"
+            ? []
+            : getAuditTrail(currentUser?.role);
     const users = getUsers();
+    const products = currentShop
+        ? getProducts().filter((product) => product.shopId === currentShop.id)
+        : currentUser?.role === "shop-admin"
+            ? []
+            : getProducts();
 
     const grouped = auditTrail.reduce((acc, entry) => {
         acc[entry.action] = (acc[entry.action] || 0) + 1;
@@ -23,9 +38,11 @@ function AuditReportPage() {
 
             <div className="grid gap-6 md:grid-cols-3">
                 <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-                    <p className="text-sm text-gray-500">Total users</p>
+                    <p className="text-sm text-gray-500">
+                        {currentShop ? "Shop products" : "Total users"}
+                    </p>
                     <p className="mt-3 text-3xl font-bold text-gray-900">
-                        {users.length}
+                        {currentShop ? products.length : users.length}
                     </p>
                 </div>
 

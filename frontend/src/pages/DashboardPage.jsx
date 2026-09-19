@@ -1,10 +1,30 @@
-import { getAuditTrail, getProducts, getUsers } from "../data/catalog";
+import {
+    getAuditTrail,
+    getCategories,
+    getCurrentShop,
+    getProducts,
+} from "../data/catalog";
 
 function DashboardPage() {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-    const products = getProducts();
-    const users = getUsers();
-    const auditTrail = getAuditTrail();
+    const currentShop = getCurrentShop();
+    const isShopAdmin = currentUser?.role === "shop-admin";
+    const allProducts = getProducts();
+    const products = currentShop
+        ? allProducts.filter((product) => product.shopId === currentShop.id)
+        : isShopAdmin
+            ? []
+            : allProducts;
+    const categories = currentShop
+        ? getCategories().filter((category) => category.shopId === currentShop.id)
+        : isShopAdmin
+            ? []
+            : getCategories();
+    const auditTrail = currentShop
+        ? getAuditTrail("shop-admin", currentShop.id)
+        : isShopAdmin
+            ? []
+            : getAuditTrail();
     const isSuperAdmin = currentUser?.role === "super-admin";
 
     const totalRevenue = products.reduce((sum, product) => sum + product.price, 0);
@@ -17,7 +37,7 @@ function DashboardPage() {
                     {roleLabel}
                 </p>
                 <h1 className="mt-2 text-4xl font-bold text-gray-900">
-                    Dashboard
+                    {currentShop?.name || "Dashboard"}
                 </h1>
             </div>
 
@@ -30,9 +50,9 @@ function DashboardPage() {
                 </div>
 
                 <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-                    <p className="text-sm font-medium text-gray-500">Users</p>
+                    <p className="text-sm font-medium text-gray-500">Categories</p>
                     <p className="mt-3 text-3xl font-bold text-gray-900">
-                        {users.length}
+                        {categories.length}
                     </p>
                 </div>
 
@@ -103,19 +123,21 @@ function DashboardPage() {
                                 Shop management
                             </a>
                         )}
-                        <a
-                            href="/admin/audit-trail"
-                            className="block rounded-2xl bg-gray-50 px-4 py-3 font-semibold text-gray-700"
-                        >
-                            Audit trail
-                        </a>
-                        <a
-                            href="/admin/audit-report"
-                            className="block rounded-2xl bg-gray-50 px-4 py-3 font-semibold text-gray-700"
-                        >
-                            Audit report
-                        </a>
-                        {(currentUser?.role === "shop-admin" || currentUser?.role === "super-admin") && (
+                        <>
+                            <a
+                                href="/admin/audit-trail"
+                                className="block rounded-2xl bg-gray-50 px-4 py-3 font-semibold text-gray-700"
+                            >
+                                Audit trail
+                            </a>
+                            <a
+                                href="/admin/audit-report"
+                                className="block rounded-2xl bg-gray-50 px-4 py-3 font-semibold text-gray-700"
+                            >
+                                Audit report
+                            </a>
+                        </>
+                        {currentUser?.role === "super-admin" && (
                             <a
                                 href="/admin/user-management"
                                 className="block rounded-2xl bg-gray-50 px-4 py-3 font-semibold text-gray-700"

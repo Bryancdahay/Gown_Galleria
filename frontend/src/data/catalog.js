@@ -1,7 +1,3 @@
-const defaultProducts = [];
-
-const defaultCategories = [];
-
 export const CART_KEY = "gownGalleriaCart";
 export const ORDERS_KEY = "gownGalleriaOrders";
 export const PRODUCTS_KEY = "gownGalleriaProducts";
@@ -9,22 +5,10 @@ export const USERS_KEY = "gownGalleriaUsers";
 export const AUDIT_KEY = "gownGalleriaAudit";
 export const CATEGORIES_KEY = "gownGalleriaCategories";
 export const SHOPS_KEY = "gownGalleriaShops";
+export const MESSAGES_KEY = "gownGalleriaMessages";
+export const RESET_KEY = "gownGalleriaFreshReset20260919";
 
 const defaultUsers = [
-    {
-        id: "customer-demo",
-        name: "Customer User",
-        email: "customer@gowngalleria.com",
-        password: "customer123",
-        role: "customer",
-    },
-    {
-        id: "shop-admin-demo",
-        name: "Shop Admin",
-        email: "shopadmin@gowngalleria.com",
-        password: "admin123",
-        role: "shop-admin",
-    },
     {
         id: "super-admin-demo",
         name: "Super Admin",
@@ -37,7 +21,7 @@ const defaultUsers = [
 function safeJSONParse(value) {
     try {
         return value ? JSON.parse(value) : [];
-    } catch (error) {
+    } catch {
         return [];
     }
 }
@@ -47,16 +31,25 @@ export function ensureSeededStorage() {
         return;
     }
 
-    if (!localStorage.getItem(PRODUCTS_KEY)) {
-        localStorage.setItem(PRODUCTS_KEY, JSON.stringify(defaultProducts));
-    }
-
-    if (!localStorage.getItem(CATEGORIES_KEY)) {
-        localStorage.setItem(CATEGORIES_KEY, JSON.stringify(defaultCategories));
-    }
-
     if (!localStorage.getItem(SHOPS_KEY)) {
         localStorage.setItem(SHOPS_KEY, JSON.stringify([]));
+    }
+
+    if (!localStorage.getItem(RESET_KEY)) {
+        localStorage.setItem(PRODUCTS_KEY, JSON.stringify([]));
+        localStorage.setItem(CATEGORIES_KEY, JSON.stringify([]));
+        localStorage.setItem(SHOPS_KEY, JSON.stringify([]));
+        localStorage.setItem(AUDIT_KEY, JSON.stringify([]));
+        localStorage.setItem(CART_KEY, JSON.stringify([]));
+        localStorage.setItem(ORDERS_KEY, JSON.stringify([]));
+        localStorage.setItem(MESSAGES_KEY, JSON.stringify([]));
+        localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
+        const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+        if (storedUser?.email !== "superadmin@gowngalleria.com") {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+        }
+        localStorage.setItem(RESET_KEY, "complete");
     }
 
     const storedUsers = safeJSONParse(localStorage.getItem(USERS_KEY));
@@ -88,19 +81,6 @@ export function ensureSeededStorage() {
         localStorage.setItem(USERS_KEY, JSON.stringify(mergedUsers));
     }
 
-    if (!localStorage.getItem(AUDIT_KEY)) {
-        localStorage.setItem(
-            AUDIT_KEY,
-            JSON.stringify([
-                {
-                    id: "seed-entry",
-                    action: "System initialized",
-                    details: "Demo accounts and catalog were seeded.",
-                    createdAt: new Date().toISOString(),
-                },
-            ])
-        );
-    }
 }
 
 export function getProducts() {
@@ -131,7 +111,8 @@ export function upsertCategory(category) {
     if (existingCategory && existingCategory.title !== category.title) {
         const currentProducts = getProducts();
         const updatedProducts = currentProducts.map((product) =>
-            product.category === existingCategory.title
+            product.category === existingCategory.title &&
+            (!existingCategory.shopId || product.shopId === existingCategory.shopId)
                 ? { ...product, category: category.title }
                 : product
         );
@@ -152,7 +133,8 @@ export function deleteCategory(categoryId) {
     if (categoryToDelete) {
         const currentProducts = getProducts();
         const updatedProducts = currentProducts.map((product) =>
-            product.category === categoryToDelete.title
+            product.category === categoryToDelete.title &&
+            (!categoryToDelete.shopId || product.shopId === categoryToDelete.shopId)
                 ? { ...product, category: "Uncategorized" }
                 : product
         );
@@ -206,6 +188,16 @@ export function getShops() {
     return safeJSONParse(localStorage.getItem(SHOPS_KEY));
 }
 
+export function getCurrentShop() {
+    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+
+    if (!currentUser || currentUser.role !== "shop-admin") {
+        return null;
+    }
+
+    return getShops().find((shop) => shop.adminUserId === currentUser.id) || null;
+}
+
 export function saveShops(shops) {
     localStorage.setItem(SHOPS_KEY, JSON.stringify(shops));
     return shops;
@@ -257,27 +249,52 @@ export function setStoredOrders(orders) {
     localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
 }
 
-export function getAuditTrail(role) {
+export function getMessages() {
+    ensureSeededStorage();
+    return safeJSONParse(localStorage.getItem(MESSAGES_KEY));
+}
+
+export function addMessage(message) {
+    const messages = [...getMessages(), {
+        id: `message-${Date.now()}-${Math.random()}`,
+        createdAt: new Date().toISOString(),
+        ...message,
+    }];
+
+    localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+    window.dispatchEvent(new Event("messages:updated"));
+    return messages;
+}
+
+export function getAuditTrail(role, shopId) {
     ensureSeededStorage();
     const auditTrail = safeJSONParse(localStorage.getItem(AUDIT_KEY));
 
-    if (!role) {
+    if (!role && !shopId) {
         return auditTrail;
     }
 
-    return auditTrail.filter((entry) => entry.role === role);
+    return auditTrail.filter(
+        (entry) =>
+            (!role || entry.role === role) &&
+            (!shopId || entry.shopId === shopId)
+    );
 }
 
 export function addAuditEntry(action, details, roleOverride) {
     const auditTrail = getAuditTrail();
     const storedUser = JSON.parse(localStorage.getItem("user") || "null");
     const entryRole = roleOverride || storedUser?.role || "customer";
+    const currentShop = getShops().find(
+        (shop) => shop.adminUserId === storedUser?.id
+    );
     const entry = {
         id: `${Date.now()}-${Math.random()}`,
         action,
         details,
         createdAt: new Date().toISOString(),
         role: entryRole,
+        shopId: currentShop?.id || null,
     };
 
     const updatedTrail = [entry, ...auditTrail];
@@ -286,14 +303,3 @@ export function addAuditEntry(action, details, roleOverride) {
     return updatedTrail;
 }
 
-export function getCategoryCollections(slug) {
-    const category = getCategories().find((item) => item.slug === slug);
-
-    if (!category) {
-        return [];
-    }
-
-    return getProducts().filter((item) => item.category === category.title);
-}
-
-export const gowns = defaultProducts;

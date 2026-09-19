@@ -1,9 +1,7 @@
-import { Link } from "react-router-dom";
-
 function Home() {
     return (
         <main className="mx-auto max-w-7xl px-6 py-16">
-            <section className="rounded-[2rem] bg-gradient-to-r from-pink-600 via-rose-500 to-pink-400 p-10 text-white shadow-xl">
+            <section className="rounded-4xl bg-linear-to-r from-pink-600 via-rose-500 to-pink-400 p-10 text-white shadow-xl">
                 <div className="grid items-center gap-10 lg:grid-cols-2">
                     <div>
                         <p className="mb-3 text-sm font-semibold uppercase tracking-[0.25em] text-pink-100">
@@ -19,25 +17,10 @@ function Home() {
                             proms, and every unforgettable celebration.
                         </p>
 
-                        <div className="mt-8 flex flex-wrap gap-4">
-                            <Link
-                                to="/register"
-                                className="rounded-lg bg-white px-6 py-3 font-semibold text-pink-600 shadow hover:bg-pink-50"
-                            >
-                                Get Started
-                            </Link>
-
-                            <Link
-                                to="/login"
-                                className="rounded-lg border border-white/70 bg-transparent px-6 py-3 font-semibold text-white hover:bg-white/10"
-                            >
-                                Login
-                            </Link>
-                        </div>
                     </div>
 
-                    <div className="rounded-[2rem] border border-white/20 bg-white/10 p-6 backdrop-blur-sm">
-                        <div className="h-96 rounded-[1.5rem] bg-gradient-to-br from-white/20 via-pink-200/20 to-rose-300/20" />
+                    <div className="rounded-4xl border border-white/20 bg-white/10 p-6 backdrop-blur-sm">
+                        <div className="h-96 rounded-3xl bg-linear-to-br from-white/20 via-pink-200/20 to-rose-300/20" />
                     </div>
                 </div>
             </section>

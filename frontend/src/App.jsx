@@ -7,10 +7,10 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import CustomerHome from "./pages/CustomerHome";
-import GownsPage from "./pages/GownsPage";
-import CategoriesPage from "./pages/CategoriesPage";
-import CollectionPage from "./pages/CollectionPage";
+import ProductDetailsPage from "./pages/ProductDetailsPage";
+import ShopPage from "./pages/ShopPage";
 import CartPage from "./pages/CartPage";
+import MessagesPage from "./pages/MessagesPage";
 import ProfilePage from "./pages/ProfilePage";
 import DashboardPage from "./pages/DashboardPage";
 import AdminInventoryPage from "./pages/AdminInventoryPage";
@@ -83,7 +83,8 @@ function App() {
                 <ToastContainer />
                 <Navbar />
 
-                <Routes>
+                <main className="min-h-screen md:ml-72">
+                    <Routes>
                     <Route
                         path="/"
                         element={<Home />}
@@ -117,37 +118,37 @@ function App() {
                     />
 
                     <Route
-                        path="/gowns"
-                        element={
-                            <ProtectedRoute>
-                                <GownsPage />
-                            </ProtectedRoute>
-                        }
-                    />
-
-                    <Route
-                        path="/categories"
-                        element={
-                            <ProtectedRoute>
-                                <CategoriesPage />
-                            </ProtectedRoute>
-                        }
-                    />
-
-                    <Route
-                        path="/categories/:slug"
-                        element={
-                            <ProtectedRoute>
-                                <CollectionPage />
-                            </ProtectedRoute>
-                        }
-                    />
-
-                    <Route
                         path="/cart"
                         element={
                             <ProtectedRoute>
                                 <CartPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/products/:productId"
+                        element={
+                            <ProtectedRoute>
+                                <ProductDetailsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/shops/:shopId"
+                        element={
+                            <ProtectedRoute>
+                                <ShopPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/messages"
+                        element={
+                            <ProtectedRoute>
+                                <MessagesPage />
                             </ProtectedRoute>
                         }
                     />
@@ -239,8 +240,9 @@ function App() {
                         }
                     />
 
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                </main>
             </div>
         </BrowserRouter>
     );

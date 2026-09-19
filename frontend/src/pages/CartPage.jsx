@@ -10,8 +10,16 @@ import {
 function CartPage() {
     const [cart, setCart] = useState(getStoredCart());
     const [message, setMessage] = useState("");
+    const [removeCandidate, setRemoveCandidate] = useState(null);
 
     function updateQuantity(id, delta) {
+        const item = cart.find((cartItem) => cartItem.id === id);
+
+        if (item && delta < 0 && item.quantity === 1) {
+            setRemoveCandidate(item);
+            return;
+        }
+
         const updatedCart = cart
             .map((item) =>
                 item.id === id
@@ -24,11 +32,16 @@ function CartPage() {
         setStoredCart(updatedCart);
     }
 
-    function removeItem(id) {
-        const updatedCart = cart.filter((item) => item.id !== id);
+    function confirmRemove() {
+        if (!removeCandidate) {
+            return;
+        }
+
+        const updatedCart = cart.filter((item) => item.id !== removeCandidate.id);
 
         setCart(updatedCart);
         setStoredCart(updatedCart);
+        setRemoveCandidate(null);
     }
 
     function placeOrder() {
@@ -38,7 +51,7 @@ function CartPage() {
         }
 
         const order = {
-            id: Date.now(),
+            id: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
             items: cart,
             total: totalPrice,
@@ -130,8 +143,8 @@ function CartPage() {
 
                             <button
                                 type="button"
-                                onClick={() => removeItem(item.id)}
-                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
+                                onClick={() => setRemoveCandidate(item)}
+                                className="rounded-lg border border-pink-200 bg-pink-50 px-3 py-2 text-sm font-semibold text-pink-600 hover:bg-pink-100"
                             >
                                 Remove
                             </button>
@@ -167,6 +180,35 @@ function CartPage() {
                         >
                             Place order
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {removeCandidate && (
+                <div className="modal-overlay z-50 bg-gray-900/50">
+                    <div className="w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-2xl">
+                        <h2 className="text-xl font-bold text-gray-900">
+                            Remove item?
+                        </h2>
+                        <p className="mt-3 text-gray-600">
+                            Remove {removeCandidate.name} from your cart?
+                        </p>
+                        <div className="mt-6 flex justify-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setRemoveCandidate(null)}
+                                className="rounded-lg border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmRemove}
+                                className="rounded-lg bg-pink-600 px-4 py-2 font-semibold text-white hover:bg-pink-700"
+                            >
+                                Remove
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

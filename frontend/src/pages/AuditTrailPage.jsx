@@ -1,8 +1,13 @@
-import { getAuditTrail } from "../data/catalog";
+import { getAuditTrail, getCurrentShop } from "../data/catalog";
 
 function AuditTrailPage() {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-    const auditTrail = getAuditTrail(currentUser?.role);
+    const currentShop = getCurrentShop();
+    const auditTrail = currentShop
+        ? getAuditTrail("shop-admin", currentShop.id)
+        : currentUser?.role === "shop-admin"
+            ? []
+            : getAuditTrail(currentUser?.role);
 
     return (
         <main className="mx-auto max-w-7xl px-6 py-16">

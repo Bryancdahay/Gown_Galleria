@@ -4,6 +4,7 @@ import {
     addAuditEntry,
     deleteProduct,
     getCategories,
+    getCurrentShop,
     getProducts,
     upsertProduct,
 } from "../data/catalog";
@@ -12,7 +13,7 @@ import { showToast } from "../utils/toast";
 const emptyProduct = {
     id: "",
     name: "",
-    category: "Bridal",
+    category: "",
     price: 0,
     image: "",
     description: "",
@@ -29,8 +30,19 @@ function AdminInventoryPage() {
 
     useEffect(() => {
         const syncCatalog = () => {
-            setCategories(getCategories());
-            setProducts(getProducts());
+            const currentShop = getCurrentShop();
+            const allProducts = getProducts();
+            const shopProducts = currentShop
+                ? allProducts.filter((product) => product.shopId === currentShop.id)
+                : [];
+            setCategories(
+                getCategories().filter(
+                    (category) => currentShop && category.shopId === currentShop.id
+                )
+            );
+            setProducts(
+                shopProducts
+            );
         };
 
         syncCatalog();
@@ -78,19 +90,27 @@ function AdminInventoryPage() {
             return;
         }
 
+        const currentShop = getCurrentShop();
         const productPayload = {
             ...form,
             id: editingId || `product-${Date.now()}`,
             price: Number(form.price),
+            shopId: form.shopId || currentShop?.id,
+            shopName: form.shopName || currentShop?.name,
         };
 
         const updatedProducts = upsertProduct(productPayload);
-        setProducts(updatedProducts);
+        setProducts(
+            currentShop
+                ? updatedProducts.filter((product) => product.shopId === currentShop.id)
+                : []
+        );
         addAuditEntry(
             editingId ? "Updated product" : "Added product",
             `${productPayload.name} was ${editingId ? "updated" : "added"}.`
         );
         showToast(editingId ? "Product updated successfully." : "Product added successfully.");
+        window.dispatchEvent(new Event("catalog:updated"));
 
         setForm(emptyProduct);
         setEditingId(null);
@@ -129,12 +149,18 @@ function AdminInventoryPage() {
         }
 
         const updatedProducts = deleteProduct(deleteCandidate.id);
-        setProducts(updatedProducts);
+        const currentShop = getCurrentShop();
+        setProducts(
+            currentShop
+                ? updatedProducts.filter((product) => product.shopId === currentShop.id)
+                : []
+        );
         addAuditEntry(
             "Deleted product",
             `${deleteCandidate.name || "Product"} was deleted.`
         );
         showToast("Product deleted successfully.");
+        window.dispatchEvent(new Event("catalog:updated"));
         setDeleteCandidate(null);
     }
 
@@ -199,7 +225,7 @@ function AdminInventoryPage() {
                                     <button
                                         type="button"
                                         onClick={() => handleDelete(product.id)}
-                                        className="rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-600"
+                                        className="rounded-lg bg-pink-50 px-3 py-2 text-sm font-semibold text-pink-600"
                                     >
                                         Delete
                                     </button>
@@ -211,8 +237,8 @@ function AdminInventoryPage() {
             </div>
 
             {isFormOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4">
-                    <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
+                <div className="modal-overlay z-50 bg-gray-900/50">
+                    <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-2xl">
                         <div className="mb-4 flex items-center justify-between">
                             <h2 className="text-xl font-bold text-gray-900">
                                 {editingId ? "Edit product" : "Add product"}
@@ -226,7 +252,7 @@ function AdminInventoryPage() {
                             </button>
                         </div>
 
-                        <div className="max-h-[70vh] overflow-y-auto pr-1">
+                        <div className="min-h-0 overflow-y-auto pr-1">
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <input
                                     name="name"
@@ -242,16 +268,15 @@ function AdminInventoryPage() {
                                     onChange={handleChange}
                                     className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500"
                                 >
-                                    {(categories.length ? categories : [{ title: "Bridal" }]).map(
-                                        (category) => (
-                                            <option
-                                                key={category.id || category.title}
-                                                value={category.title}
-                                            >
-                                                {category.title}
-                                            </option>
-                                        )
-                                    )}
+                                    <option value="">Select a category</option>
+                                    {categories.map((category) => (
+                                        <option
+                                            key={category.id || category.title}
+                                            value={category.title}
+                                        >
+                                            {category.title}
+                                        </option>
+                                    ))}
                                 </select>
 
                                 <input
@@ -309,7 +334,7 @@ function AdminInventoryPage() {
             )}
 
             {deleteCandidate && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4">
+                <div className="modal-overlay z-50 bg-gray-900/50">
                     <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl text-center">
                         <h3 className="text-xl font-bold text-gray-900">
                             Delete product?
@@ -329,7 +354,7 @@ function AdminInventoryPage() {
                             <button
                                 type="button"
                                 onClick={confirmDelete}
-                                className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700"
+                                className="rounded-lg bg-pink-600 px-4 py-2 font-semibold text-white hover:bg-pink-700"
                             >
                                 Delete
                             </button>

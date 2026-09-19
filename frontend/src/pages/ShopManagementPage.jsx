@@ -266,7 +266,7 @@ function ShopManagementPage() {
                                     <button
                                         type="button"
                                         onClick={() => handleDelete(shop)}
-                                        className="rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-600"
+                                        className="rounded-lg bg-pink-50 px-3 py-2 text-sm font-semibold text-pink-600"
                                     >
                                         Delete
                                     </button>
@@ -278,7 +278,7 @@ function ShopManagementPage() {
             </div>
 
             {isFormOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4">
+                <div className="modal-overlay z-50 bg-gray-900/50">
                     <div className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl">
                         <div className="mb-4 flex items-center justify-between">
                             <h2 className="text-xl font-bold text-gray-900">
@@ -418,7 +418,7 @@ function ShopManagementPage() {
             )}
 
             {deleteCandidate && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4">
+                <div className="modal-overlay z-50 bg-gray-900/50">
                     <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl text-center">
                         <h3 className="text-xl font-bold text-gray-900">Delete shop?</h3>
                         <p className="mt-2 text-gray-600">
@@ -436,7 +436,7 @@ function ShopManagementPage() {
                             <button
                                 type="button"
                                 onClick={confirmDelete}
-                                className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700"
+                                className="rounded-lg bg-pink-600 px-4 py-2 font-semibold text-white hover:bg-pink-700"
                             >
                                 Delete
                             </button>

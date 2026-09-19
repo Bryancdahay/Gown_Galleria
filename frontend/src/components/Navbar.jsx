@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { getCurrentUser, logoutUser } from "../api";
 import { ensureSeededStorage } from "../data/catalog";
 import { showToast } from "../utils/toast";
@@ -7,13 +7,21 @@ import LoadingModal from "./LoadingModal";
 
 function Navbar() {
     const navigate = useNavigate();
-    const menuRef = useRef(null);
+    const location = useLocation();
 
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [menuOpen, setMenuOpen] = useState(false);
     const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    function getSidebarLinkClass(path) {
+        const isActive = location.pathname === path;
+
+        return isActive
+            ? "rounded-lg bg-pink-600 px-4 py-3 text-white shadow-sm"
+            : "rounded-lg px-4 py-3 text-pink-600 hover:bg-pink-50";
+    }
 
     useEffect(() => {
         async function checkUser() {
@@ -21,7 +29,7 @@ function Navbar() {
                 ensureSeededStorage();
                 const currentUser = await getCurrentUser();
                 setUser(currentUser);
-            } catch (error) {
+            } catch {
                 setUser(null);
             } finally {
                 setLoading(false);
@@ -41,24 +49,6 @@ function Navbar() {
         };
     }, []);
 
-    useEffect(() => {
-        if (!menuOpen) {
-            return;
-        }
-
-        function handleClickOutside(event) {
-            if (menuRef.current && !menuRef.current.contains(event.target)) {
-                setMenuOpen(false);
-            }
-        }
-
-        document.addEventListener("mousedown", handleClickOutside);
-
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [menuOpen]);
-
     async function handleLogout() {
         setIsLoggingOut(true);
 
@@ -77,7 +67,6 @@ function Navbar() {
             window.dispatchEvent(new Event("user:updated"));
 
             setUser(null);
-            setMenuOpen(false);
             setLogoutConfirmOpen(false);
             setIsLoggingOut(false);
             showToast("Logged out successfully.");
@@ -87,8 +76,8 @@ function Navbar() {
 
     if (loading) {
         return (
-            <nav className="border-b border-gray-200 bg-white">
-                <div className="mx-auto flex max-w-7xl items-center px-6 py-4">
+            <nav className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-gray-200 bg-white px-6 py-8 shadow-sm">
+                <div className="flex items-center">
                     <Link
                         to="/"
                         className="text-2xl font-bold text-pink-600"
@@ -104,8 +93,23 @@ function Navbar() {
         <>
             <LoadingModal isOpen={isLoggingOut} message="Logging out..." />
 
-            <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/90 shadow-sm backdrop-blur-sm">
-            <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+            <button
+                type="button"
+                onClick={() => setMobileMenuOpen((prev) => !prev)}
+                className="fixed left-4 top-4 z-60 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-md md:hidden"
+                aria-label="Toggle navigation"
+            >
+                Menu
+            </button>
+
+            <nav
+                onClick={(event) => {
+                    if (event.target.closest("a")) {
+                        setMobileMenuOpen(false);
+                    }
+                }}
+                className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-gray-200 bg-white/95 px-6 py-8 shadow-sm backdrop-blur-sm transition-transform md:translate-x-0 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}
+            >
                 <Link
                     to={
                         user
@@ -120,17 +124,17 @@ function Navbar() {
                 </Link>
 
                 {!user && (
-                    <div className="flex items-center gap-4">
+                    <div className="mt-10 flex flex-col gap-2">
                         <Link
                             to="/login"
-                            className="rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100"
+                            className={getSidebarLinkClass("/login")}
                         >
                             Login
                         </Link>
 
                         <Link
                             to="/register"
-                            className="rounded-lg bg-pink-600 px-4 py-2 text-white hover:bg-pink-700"
+                            className={getSidebarLinkClass("/register")}
                         >
                             Register
                         </Link>
@@ -138,42 +142,37 @@ function Navbar() {
                 )}
 
                 {user && (
-                    <div className="flex items-center gap-6">
+                    <div className="mt-10 flex min-h-0 flex-1 flex-col">
+                        <div className="flex flex-col gap-1">
                         {user.role === "customer" ? (
                             <>
                                 <Link
                                     to="/home"
-                                    className="text-gray-700 hover:text-pink-600"
+                                    className={getSidebarLinkClass("/home")}
                                 >
                                     Home
                                 </Link>
 
                                 <Link
-                                    to="/gowns"
-                                    className="text-gray-700 hover:text-pink-600"
-                                >
-                                    Gowns
-                                </Link>
-
-                                <Link
-                                    to="/categories"
-                                    className="text-gray-700 hover:text-pink-600"
-                                >
-                                    Categories
-                                </Link>
-
-                                <Link
                                     to="/cart"
-                                    className="text-gray-700 hover:text-pink-600"
+                                    className={getSidebarLinkClass("/cart")}
                                 >
-                                    My cart
+                                    Cart
                                 </Link>
+
+                                <Link
+                                    to="/messages"
+                                    className={getSidebarLinkClass("/messages")}
+                                >
+                                    Messages
+                                </Link>
+
                             </>
                         ) : (
                             <>
                                 <Link
                                     to="/admin/dashboard"
-                                    className="text-gray-700 hover:text-pink-600"
+                                    className={getSidebarLinkClass("/admin/dashboard")}
                                 >
                                     Dashboard
                                 </Link>
@@ -181,25 +180,32 @@ function Navbar() {
                                 {user.role === "shop-admin" && (
                                     <>
                                         <Link
+                                            to="/messages"
+                                            className={getSidebarLinkClass("/messages")}
+                                        >
+                                            Messages
+                                        </Link>
+
+                                        <Link
                                             to="/admin/inventory"
-                                            className="text-gray-700 hover:text-pink-600"
+                                            className={getSidebarLinkClass("/admin/inventory")}
                                         >
                                             Inventory management
                                         </Link>
 
                                         <Link
                                             to="/admin/category-management"
-                                            className="text-gray-700 hover:text-pink-600"
+                                            className={getSidebarLinkClass("/admin/category-management")}
                                         >
                                             Category management
                                         </Link>
                                     </>
                                 )}
 
-                                {(user.role === "shop-admin" || user.role === "super-admin") && (
+                                {user.role === "super-admin" && (
                                     <Link
                                         to="/admin/user-management"
-                                        className="text-gray-700 hover:text-pink-600"
+                                        className={getSidebarLinkClass("/admin/user-management")}
                                     >
                                         User management
                                     </Link>
@@ -208,7 +214,7 @@ function Navbar() {
                                 {user.role === "super-admin" && (
                                     <Link
                                         to="/admin/shop-management"
-                                        className="text-gray-700 hover:text-pink-600"
+                                        className={getSidebarLinkClass("/admin/shop-management")}
                                     >
                                         Shop management
                                     </Link>
@@ -216,57 +222,40 @@ function Navbar() {
 
                                 <Link
                                     to="/admin/audit-trail"
-                                    className="text-gray-700 hover:text-pink-600"
+                                    className={getSidebarLinkClass("/admin/audit-trail")}
                                 >
                                     Audit trail
                                 </Link>
 
                                 <Link
                                     to="/admin/audit-report"
-                                    className="text-gray-700 hover:text-pink-600"
+                                    className={getSidebarLinkClass("/admin/audit-report")}
                                 >
                                     Audit report
                                 </Link>
                             </>
                         )}
 
-                        <div className="relative" ref={menuRef}>
-                            <button
-                                onClick={() => setMenuOpen((prev) => !prev)}
-                                className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 hover:bg-gray-100"
-                                aria-label="Open menu"
+                        </div>
+
+                        <div className="mt-auto border-t border-gray-100 pt-4">
+                            <Link
+                                to="/settings"
+                                className={getSidebarLinkClass("/settings")}
                             >
-                                <div className="space-y-1">
-                                    <span className="block h-0.5 w-5 bg-current" />
-                                    <span className="block h-0.5 w-5 bg-current" />
-                                    <span className="block h-0.5 w-5 bg-current" />
-                                </div>
+                                Settings
+                            </Link>
+
+                            <button
+                                onClick={() => setLogoutConfirmOpen(true)}
+                                className="mt-1 block w-full rounded-lg px-4 py-3 text-left font-medium text-pink-600 hover:bg-pink-50"
+                            >
+                                Log out
                             </button>
-
-                            {menuOpen && (
-                                <div className="absolute right-0 mt-3 w-52 rounded-2xl border border-gray-200 bg-white p-2 shadow-xl">
-                                    <Link
-                                        to="/settings"
-                                        onClick={() => setMenuOpen(false)}
-                                        className="block rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    >
-                                        Settings
-                                    </Link>
-
-                                    <div className="my-1 h-px bg-gray-200" />
-
-                                    <button
-                                        onClick={() => setLogoutConfirmOpen(true)}
-                                        className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
-                                    >
-                                        Log out
-                                    </button>
-                                </div>
-                            )}
 
                             {logoutConfirmOpen && (
                                 <div
-                                    className="fixed inset-0 z-9999 flex items-center justify-center bg-gray-900/50 p-4"
+                                    className="modal-overlay z-9999 bg-gray-900/50"
                                     style={{ position: "fixed", inset: 0 }}
                                     onClick={() => setLogoutConfirmOpen(false)}
                                 >
@@ -293,7 +282,7 @@ function Navbar() {
                                             <button
                                                 type="button"
                                                 onClick={handleLogout}
-                                                className="rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700"
+                                                className="rounded-lg bg-pink-600 px-4 py-2 font-semibold text-white hover:bg-pink-700"
                                             >
                                                 Log out
                                             </button>
@@ -304,7 +293,6 @@ function Navbar() {
                         </div>
                     </div>
                 )}
-            </div>
             </nav>
         </>
     );
