@@ -4,44 +4,52 @@
 	--color-vanilla: #f2ede9;
 	--color-moonstone: #973830;
 
-	--color-white: #f2ede9;
-	--color-black: #973830;
+	/* Base */
+	--color-white: #f2ede9;   /* Cream — card/page backgrounds */
+	--color-black: #973830;   /* Rusty — strong text */
 
-	--color-gray-50: #f2ede9;
-	--color-gray-100: #f2ede9;
-	--color-gray-200: #973830;
-	--color-gray-300: #973830;
-	--color-gray-400: #973830;
-	--color-gray-500: #973830;
-	--color-gray-600: #973830;
-	--color-gray-700: #973830;
-	--color-gray-800: #973830;
-	--color-gray-900: #973830;
+	/* Gray scale: light = Cream, dark = Rusty */
+	--color-gray-50:  #f2ede9; /* Cream — subtle backgrounds */
+	--color-gray-100: #f2ede9; /* Cream — card ring / hairlines */
+	--color-gray-200: #e8ddd7; /* Cream-dark — dividers */
+	--color-gray-300: #c9a49f; /* Cream-Rusty mid — borders */
+	--color-gray-400: #b07870; /* Rusty-light — muted icons */
+	--color-gray-500: #973830; /* Rusty — secondary text */
+	--color-gray-600: #7e2f28; /* Rusty-dark — body text */
+	--color-gray-700: #6b2722; /* Rusty-darker */
+	--color-gray-800: #57201c; /* Rusty-darkest */
+	--color-gray-900: #3f1714; /* Near-black Rusty — headings */
 
-	--color-pink-50: #f2ede9;
-	--color-pink-100: #f2ede9;
-	--color-pink-200: #973830;
-	--color-pink-400: #f2ede9;
-	--color-pink-500: #973830;
-	--color-pink-600: #973830;
-	--color-pink-700: #973830;
+	/* Pink → mapped to the brand palette */
+	--color-pink-50:  #f2ede9; /* Cream — pink-tinted bg */
+	--color-pink-100: #f2ede9; /* Cream */
+	--color-pink-200: #e0ccc9; /* Cream-Rusty blend */
+	--color-pink-400: #c07068; /* Rusty-light */
+	--color-pink-500: #973830; /* Rusty */
+	--color-pink-600: #973830; /* Rusty — primary accent text */
+	--color-pink-700: #7e2f28; /* Rusty-dark */
 
-	--color-rose-300: #f2ede9;
-	--color-rose-500: #973830;
-	--color-rose-700: #973830;
-	--color-red-50: #FEF2F2;
-	--color-red-200: #FECACA;
-	--color-red-500: #EF4444;
-	--color-red-600: #DC2626;
-	--color-red-700: #B91C1C;
-	--color-green-50: #F0FDF4;
+	/* Rose */
+	--color-rose-300: #c9a49f; /* Cream-Rusty mid */
+	--color-rose-500: #973830; /* Rusty */
+	--color-rose-700: #7e2f28; /* Rusty-dark */
+
+	/* Keep system-status colors intact */
+	--color-red-50:   #FEF2F2;
+	--color-red-200:  #FECACA;
+	--color-red-500:  #EF4444;
+	--color-red-600:  #DC2626;
+	--color-red-700:  #B91C1C;
+	--color-green-50:  #F0FDF4;
 	--color-green-200: #BBF7D0;
 	--color-green-500: #22C55E;
 	--color-green-700: #15803D;
 	--color-green-800: #166534;
-	--color-amber-400: #973830;
+
+	/* Accent aliases — all Rusty */
+	--color-amber-400:  #973830;
 	--color-yellow-500: #973830;
-	--color-blue-500: #973830;
+	--color-blue-500:   #973830;
 	--color-purple-500: #973830;
 }
 

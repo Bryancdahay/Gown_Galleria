@@ -131,7 +131,7 @@ function DashboardPage() {
                 )}
             </div>
 
-            <div className="mt-10 grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+            <div className="mt-10">
                 <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
                     <h2 className="text-xl font-bold text-gray-900">
                         Recent activity
@@ -161,53 +161,6 @@ function DashboardPage() {
                                     </span>
                                 </div>
                             ))
-                        )}
-                    </div>
-                </div>
-
-                <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-                    <h2 className="text-xl font-bold text-gray-900">
-                        Quick links
-                    </h2>
-
-                    <div className="mt-5 space-y-3">
-                        {currentUser?.role === "shop-admin" && (
-                            <a
-                                href="/admin/inventory"
-                                className="block rounded-2xl bg-pink-50 px-4 py-3 font-semibold text-pink-700"
-                            >
-                                Inventory management
-                            </a>
-                        )}
-                        {currentUser?.role === "super-admin" && (
-                            <a
-                                href="/admin/shop-management"
-                                className="block rounded-2xl bg-pink-50 px-4 py-3 font-semibold text-pink-700"
-                            >
-                                Shop management
-                            </a>
-                        )}
-                        <>
-                            <a
-                                href="/admin/audit-trail"
-                                className="block rounded-2xl bg-gray-50 px-4 py-3 font-semibold text-gray-700"
-                            >
-                                Audit trail
-                            </a>
-                            <a
-                                href="/admin/audit-report"
-                                className="block rounded-2xl bg-gray-50 px-4 py-3 font-semibold text-gray-700"
-                            >
-                                Audit report
-                            </a>
-                        </>
-                        {currentUser?.role === "super-admin" && (
-                            <a
-                                href="/admin/user-management"
-                                className="block rounded-2xl bg-gray-50 px-4 py-3 font-semibold text-gray-700"
-                            >
-                                User management
-                            </a>
                         )}
                     </div>
                 </div>
