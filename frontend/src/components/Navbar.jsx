@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { getCurrentUser, logoutUser } from "../api";
-import { ensureSeededStorage } from "../data/catalog";
+import {
+    clearSession,
+    ensureSeededStorage,
+    getNotificationsForUser,
+    getStoredCart,
+    getStoredReservationCart,
+    isSessionValid,
+} from "../data/catalog";
 import { showToast } from "../utils/toast";
 import LoadingModal from "./LoadingModal";
 
@@ -14,19 +22,31 @@ function Navbar() {
     const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [cartCount, setCartCount] = useState(0);
+    const [reservationCartCount, setReservationCartCount] = useState(0);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     function getSidebarLinkClass(path) {
         const isActive = location.pathname === path;
 
         return isActive
-            ? "rounded-lg bg-pink-600 px-4 py-3 text-white shadow-sm"
-            : "rounded-lg px-4 py-3 text-pink-600 hover:bg-pink-50";
+            ? "block w-full rounded-lg bg-pink-600 px-4 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-pink-50 hover:text-pink-600"
+            : "block w-full rounded-lg bg-pink-50 px-4 py-3 font-medium text-pink-600 transition-colors hover:bg-pink-600 hover:text-white";
     }
 
     useEffect(() => {
         async function checkUser() {
             try {
                 ensureSeededStorage();
+
+                if (!isSessionValid()) {
+                    clearSession();
+                    setUser(null);
+                    showToast("This account is no longer available.", "error");
+                    navigate("/login");
+                    return;
+                }
+
                 const currentUser = await getCurrentUser();
                 setUser(currentUser);
             } catch {
@@ -38,14 +58,56 @@ function Navbar() {
 
         checkUser();
 
+        function updateCartCount() {
+            const currentCart = getStoredCart();
+            const total = Array.isArray(currentCart)
+                ? currentCart.reduce((sum, item) => sum + (item.quantity || 0), 0)
+                : 0;
+            setCartCount(total);
+
+            const currentReservationCart = getStoredReservationCart();
+            const reservationTotal = Array.isArray(currentReservationCart)
+                ? currentReservationCart.reduce((sum, item) => sum + (item.quantity || 0), 0)
+                : 0;
+            setReservationCartCount(reservationTotal);
+        }
+
+        updateCartCount();
+
+        function updateNotifications() {
+            const storedUser = JSON.parse(sessionStorage.getItem("user") || "null");
+            const userNotifications = getNotificationsForUser(storedUser);
+            setUnreadCount(userNotifications.filter((n) => !n.read).length);
+        }
+
+        updateNotifications();
+
         const handleUserUpdate = () => {
             checkUser();
+            updateCartCount();
+            updateNotifications();
+        };
+
+        const handleCartUpdate = () => {
+            updateCartCount();
+        };
+
+        const handleNotificationsUpdate = () => {
+            updateNotifications();
         };
 
         window.addEventListener("user:updated", handleUserUpdate);
+        window.addEventListener("cart:updated", handleCartUpdate);
+        window.addEventListener("reservation-cart:updated", handleCartUpdate);
+        window.addEventListener("notifications:updated", handleNotificationsUpdate);
+        window.addEventListener("shop-applications:updated", handleNotificationsUpdate);
 
         return () => {
             window.removeEventListener("user:updated", handleUserUpdate);
+            window.removeEventListener("cart:updated", handleCartUpdate);
+            window.removeEventListener("reservation-cart:updated", handleCartUpdate);
+            window.removeEventListener("notifications:updated", handleNotificationsUpdate);
+            window.removeEventListener("shop-applications:updated", handleNotificationsUpdate);
         };
     }, []);
 
@@ -53,7 +115,7 @@ function Navbar() {
         setIsLoggingOut(true);
 
         try {
-            const token = localStorage.getItem("token");
+            const token = sessionStorage.getItem("token");
 
             if (token) {
                 await logoutUser();
@@ -61,8 +123,8 @@ function Navbar() {
         } catch (error) {
             console.error("Logout failed:", error);
         } finally {
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("user");
 
             window.dispatchEvent(new Event("user:updated"));
 
@@ -108,7 +170,7 @@ function Navbar() {
                         setMobileMenuOpen(false);
                     }
                 }}
-                className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-gray-200 bg-white/95 px-6 py-8 shadow-sm backdrop-blur-sm transition-transform md:translate-x-0 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}
+                className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-y-auto border-r border-gray-200 bg-white/95 px-6 py-8 shadow-sm backdrop-blur-sm transition-transform md:translate-x-0 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}
             >
                 <Link
                     to={
@@ -122,6 +184,26 @@ function Navbar() {
                 >
                     Gown Galleria
                 </Link>
+
+                {user && (
+                    <div className="mt-4 flex items-center gap-3 rounded-2xl bg-pink-50 p-3">
+                        {user.avatar ? (
+                            <img
+                                src={user.avatar}
+                                alt={user.name}
+                                className="h-10 w-10 rounded-full object-cover ring-2 ring-pink-300"
+                            />
+                        ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-600 font-bold text-white">
+                                {user.name?.charAt(0)?.toUpperCase() || "U"}
+                            </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-bold text-gray-900">{user.name}</p>
+                            <p className="truncate text-xs font-medium text-pink-700 capitalize">{user.role?.replace("-", " ")}</p>
+                        </div>
+                    </div>
+                )}
 
                 {!user && (
                     <div className="mt-10 flex flex-col gap-2">
@@ -142,7 +224,7 @@ function Navbar() {
                 )}
 
                 {user && (
-                    <div className="mt-10 flex min-h-0 flex-1 flex-col">
+                    <div className="mt-6 flex min-h-0 flex-1 flex-col">
                         <div className="flex flex-col gap-1">
                         {user.role === "customer" ? (
                             <>
@@ -157,14 +239,28 @@ function Navbar() {
                                     to="/cart"
                                     className={getSidebarLinkClass("/cart")}
                                 >
-                                    Cart
+                                    Cart {cartCount > 0 ? `(${cartCount})` : ""}
+                                </Link>
+
+                                <Link
+                                    to="/reservation-cart"
+                                    className={getSidebarLinkClass("/reservation-cart")}
+                                >
+                                    Reservation cart {reservationCartCount > 0 ? `(${reservationCartCount})` : ""}
                                 </Link>
 
                                 <Link
                                     to="/messages"
                                     className={getSidebarLinkClass("/messages")}
                                 >
-                                    Messages
+                                    Chat
+                                </Link>
+
+                                <Link
+                                    to="/notifications"
+                                    className={getSidebarLinkClass("/notifications")}
+                                >
+                                    Notifications {unreadCount > 0 ? `(${unreadCount})` : ""}
                                 </Link>
 
                             </>
@@ -177,13 +273,20 @@ function Navbar() {
                                     Dashboard
                                 </Link>
 
+                                <Link
+                                    to="/notifications"
+                                    className={getSidebarLinkClass("/notifications")}
+                                >
+                                    Notifications {unreadCount > 0 ? `(${unreadCount})` : ""}
+                                </Link>
+
                                 {user.role === "shop-admin" && (
                                     <>
                                         <Link
                                             to="/messages"
                                             className={getSidebarLinkClass("/messages")}
                                         >
-                                            Messages
+                                            Chat
                                         </Link>
 
                                         <Link
@@ -220,19 +323,23 @@ function Navbar() {
                                     </Link>
                                 )}
 
-                                <Link
-                                    to="/admin/audit-trail"
-                                    className={getSidebarLinkClass("/admin/audit-trail")}
-                                >
-                                    Audit trail
-                                </Link>
+                                {user.role === "super-admin" && (
+                                    <>
+                                        <Link
+                                            to="/admin/audit-trail"
+                                            className={getSidebarLinkClass("/admin/audit-trail")}
+                                        >
+                                            Audit trail
+                                        </Link>
 
-                                <Link
-                                    to="/admin/audit-report"
-                                    className={getSidebarLinkClass("/admin/audit-report")}
-                                >
-                                    Audit report
-                                </Link>
+                                        <Link
+                                            to="/admin/audit-report"
+                                            className={getSidebarLinkClass("/admin/audit-report")}
+                                        >
+                                            Audit report
+                                        </Link>
+                                    </>
+                                )}
                             </>
                         )}
 
@@ -248,12 +355,12 @@ function Navbar() {
 
                             <button
                                 onClick={() => setLogoutConfirmOpen(true)}
-                                className="mt-1 block w-full rounded-lg px-4 py-3 text-left font-medium text-pink-600 hover:bg-pink-50"
+                                className="mt-1 block w-full rounded-lg bg-pink-50 px-4 py-3 text-left font-medium text-pink-600 transition-colors hover:bg-pink-600 hover:text-white"
                             >
                                 Log out
                             </button>
 
-                            {logoutConfirmOpen && (
+                            {logoutConfirmOpen && createPortal(
                                 <div
                                     className="modal-overlay z-9999 bg-gray-900/50"
                                     style={{ position: "fixed", inset: 0 }}
@@ -288,7 +395,8 @@ function Navbar() {
                                             </button>
                                         </div>
                                     </div>
-                                </div>
+                                </div>,
+                                document.body
                             )}
                         </div>
                     </div>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../api";
-import { ensureSeededStorage } from "../data/catalog";
+import { ensureSeededStorage, rememberCartOwner } from "../data/catalog";
 import LoadingModal from "../components/LoadingModal";
 import { showToast } from "../utils/toast";
 
@@ -34,8 +34,9 @@ function Login() {
 
             ensureSeededStorage();
 
-            localStorage.setItem("token", data.token);
-            localStorage.setItem("user", JSON.stringify(data.user));
+            sessionStorage.setItem("token", data.token);
+            sessionStorage.setItem("user", JSON.stringify(data.user));
+            rememberCartOwner(data.user.id || data.user.email);
 
             window.dispatchEvent(new Event("user:updated"));
 

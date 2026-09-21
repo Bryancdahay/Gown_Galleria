@@ -9,7 +9,7 @@ import {
 } from "../data/catalog";
 
 function MessagesPage() {
-    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    const currentUser = JSON.parse(sessionStorage.getItem("user") || "null");
     const currentShop = getCurrentShop();
     const shops = getShops();
     const [searchParams] = useSearchParams();
@@ -115,7 +115,7 @@ function MessagesPage() {
 
     return (
         <main className="mx-auto max-w-6xl px-6 py-10">
-            <h1 className="text-4xl font-bold text-gray-900">Messages</h1>
+            <h1 className="text-4xl font-bold text-gray-900">Chat</h1>
             <p className="mt-2 text-gray-600">
                 {isShopAdmin ? "Chat with your customers." : "Chat with shops about their gowns."}
             </p>

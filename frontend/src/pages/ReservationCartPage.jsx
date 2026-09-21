@@ -1,28 +1,28 @@
 import { useEffect, useState } from "react";
 
 import {
-    getStoredCart,
     getStoredOrders,
-    setStoredCart,
+    getStoredReservationCart,
     setStoredOrders,
+    setStoredReservationCart,
 } from "../data/catalog";
 
-function CartPage() {
-    const [cart, setCart] = useState(() => getStoredCart());
-    const [message, setMessage] = useState("");
+function ReservationCartPage() {
+    const [cart, setCart] = useState(() => getStoredReservationCart());
     const [removeCandidate, setRemoveCandidate] = useState(null);
+    const [message, setMessage] = useState("");
     const [fulfillment, setFulfillment] = useState("pickup");
 
     useEffect(() => {
         const handleCartUpdate = () => {
-            setCart(getStoredCart());
+            setCart(getStoredReservationCart());
         };
         handleCartUpdate();
         window.addEventListener("user:updated", handleCartUpdate);
-        window.addEventListener("cart:updated", handleCartUpdate);
+        window.addEventListener("reservation-cart:updated", handleCartUpdate);
         return () => {
             window.removeEventListener("user:updated", handleCartUpdate);
-            window.removeEventListener("cart:updated", handleCartUpdate);
+            window.removeEventListener("reservation-cart:updated", handleCartUpdate);
         };
     }, []);
 
@@ -43,7 +43,7 @@ function CartPage() {
             .filter((item) => item.quantity > 0);
 
         setCart(updatedCart);
-        setStoredCart(updatedCart);
+        setStoredReservationCart(updatedCart);
     }
 
     function confirmRemove() {
@@ -56,13 +56,22 @@ function CartPage() {
         );
 
         setCart(updatedCart);
-        setStoredCart(updatedCart);
+        setStoredReservationCart(updatedCart);
         setRemoveCandidate(null);
     }
 
-    function placeOrder() {
+    function updateDuration(id, size, field, value) {
+        const updatedCart = cart.map((item) =>
+            item.id === id && item.size === size ? { ...item, [field]: value } : item
+        );
+
+        setCart(updatedCart);
+        setStoredReservationCart(updatedCart);
+    }
+
+    function reserveItems() {
         if (!cart.length) {
-            setMessage("Your cart is empty.");
+            setMessage("Your reservation cart is empty.");
             return;
         }
 
@@ -70,6 +79,7 @@ function CartPage() {
 
         const order = {
             id: crypto.randomUUID(),
+            type: "reservation",
             userId: currentUser?.id || currentUser?.email || "guest",
             customerName: currentUser?.name || "Customer",
             customerEmail: currentUser?.email || "",
@@ -82,8 +92,8 @@ function CartPage() {
         const orders = getStoredOrders();
         setStoredOrders([...orders, order]);
         setCart([]);
-        setStoredCart([]);
-        setMessage("Order placed successfully!");
+        setStoredReservationCart([]);
+        setMessage("Items reserved successfully!");
     }
 
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -95,7 +105,7 @@ function CartPage() {
     return (
         <main className="mx-auto max-w-5xl px-6 py-16">
             <div className="mb-8 flex items-center justify-between gap-4">
-                <h1 className="text-4xl font-bold text-gray-900">My cart</h1>
+                <h1 className="text-4xl font-bold text-gray-900">Reservation cart</h1>
                 <span className="rounded-full bg-pink-100 px-3 py-1 text-sm font-semibold text-pink-700">
                     {totalItems} item{totalItems === 1 ? "" : "s"}
                 </span>
@@ -110,10 +120,10 @@ function CartPage() {
             {cart.length === 0 ? (
                 <div className="rounded-3xl bg-white p-8 text-center shadow-sm ring-1 ring-gray-100">
                     <p className="text-lg font-semibold text-gray-700">
-                        Your cart is empty
+                        Your reservation cart is empty
                     </p>
                     <p className="mt-2 text-gray-500">
-                        Add a gown from the collection to start your order.
+                        Reserve a gown from the collection to hold it for later.
                     </p>
                 </div>
             ) : (
@@ -144,6 +154,32 @@ function CartPage() {
                                 <p className="mt-2 text-lg font-semibold text-pink-600">
                                     ₱{item.price.toLocaleString()}
                                 </p>
+
+                                <div className="mt-3 flex flex-wrap items-center gap-3">
+                                    <label className="flex items-center gap-2 text-sm text-gray-600">
+                                        From
+                                        <input
+                                            type="date"
+                                            value={item.reservationFrom || ""}
+                                            onChange={(event) =>
+                                                updateDuration(item.id, item.size, "reservationFrom", event.target.value)
+                                            }
+                                            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-pink-500"
+                                        />
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm text-gray-600">
+                                        Until
+                                        <input
+                                            type="date"
+                                            value={item.reservationUntil || ""}
+                                            min={item.reservationFrom || undefined}
+                                            onChange={(event) =>
+                                                updateDuration(item.id, item.size, "reservationUntil", event.target.value)
+                                            }
+                                            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-pink-500"
+                                        />
+                                    </label>
+                                </div>
                             </div>
 
                             <div className="flex items-center gap-3">
@@ -187,13 +223,8 @@ function CartPage() {
                         </div>
 
                         <div className="mt-4 flex items-center justify-between">
-                            <span className="text-gray-600">Delivery</span>
-                            <span className="text-gray-900">Free</span>
-                        </div>
-
-                        <div className="mt-4 flex items-center justify-between">
                             <span className="text-lg font-semibold text-gray-900">
-                                Total
+                                Total reserved
                             </span>
                             <span className="text-2xl font-bold text-pink-600">
                                 ₱{totalPrice.toLocaleString()}
@@ -232,10 +263,10 @@ function CartPage() {
 
                         <button
                             type="button"
-                            onClick={placeOrder}
+                            onClick={reserveItems}
                             className="mt-6 w-full rounded-lg bg-pink-600 px-5 py-3 text-lg font-semibold text-white hover:bg-pink-700"
                         >
-                            Place order
+                            Reserve items
                         </button>
                     </div>
                 </div>
@@ -248,7 +279,7 @@ function CartPage() {
                             Remove item?
                         </h2>
                         <p className="mt-3 text-gray-600">
-                            Remove {removeCandidate.name} from your cart?
+                            Remove {removeCandidate.name} from your reservation cart?
                         </p>
                         <div className="mt-6 flex justify-center gap-3">
                             <button
@@ -273,4 +304,4 @@ function CartPage() {
     );
 }
 
-export default CartPage;
+export default ReservationCartPage;

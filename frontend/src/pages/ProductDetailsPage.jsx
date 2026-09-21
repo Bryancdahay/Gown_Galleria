@@ -5,7 +5,9 @@ import {
     getProducts,
     getShops,
     getStoredCart,
+    getStoredReservationCart,
     setStoredCart,
+    setStoredReservationCart,
 } from "../data/catalog";
 import { showToast } from "../utils/toast";
 
@@ -15,6 +17,7 @@ function ProductDetailsPage() {
     const [products] = useState(() => getProducts());
     const [shops] = useState(() => getShops());
     const [quantity, setQuantity] = useState(1);
+    const [selectedSize, setSelectedSize] = useState(null);
     const product = products.find((item) => item.id === productId);
     const shop = shops.find((item) => item.id === product?.shopId);
 
@@ -37,20 +40,59 @@ function ProductDetailsPage() {
 
     const sellerName = product.shopName || shop?.name || "Shop";
     const shopKey = product.shopId || product.shopName || "shop";
+    const availableSizes = product.sizes || [];
 
     function addToCart() {
+        if (availableSizes.length && !selectedSize) {
+            showToast("Please select a size.", "error");
+            return;
+        }
+
         const cart = getStoredCart();
-        const existingItem = cart.find((item) => item.id === product.id);
+        const existingItem = cart.find(
+            (item) => item.id === product.id && item.size === selectedSize
+        );
         const updatedCart = existingItem
             ? cart.map((item) =>
-                  item.id === product.id
+                  item.id === product.id && item.size === selectedSize
                       ? { ...item, quantity: item.quantity + quantity }
                       : item
               )
-                        : [...cart, { ...product, quantity }];
+            : [...cart, { ...product, quantity, size: selectedSize || null }];
 
         setStoredCart(updatedCart);
         showToast(`${quantity} ${product.name} added to cart.`);
+    }
+
+    function addToReservationCart() {
+        if (availableSizes.length && !selectedSize) {
+            showToast("Please select a size.", "error");
+            return;
+        }
+
+        const reservationCart = getStoredReservationCart();
+        const existingItem = reservationCart.find(
+            (item) => item.id === product.id && item.size === selectedSize
+        );
+        const updatedCart = existingItem
+            ? reservationCart.map((item) =>
+                  item.id === product.id && item.size === selectedSize
+                      ? { ...item, quantity: item.quantity + quantity }
+                      : item
+              )
+            : [
+                  ...reservationCart,
+                  {
+                      ...product,
+                      quantity,
+                      size: selectedSize || null,
+                      reservationFrom: "",
+                      reservationUntil: "",
+                  },
+              ];
+
+        setStoredReservationCart(updatedCart);
+        showToast(`${quantity} ${product.name} added to reservation cart.`);
     }
 
     return (
@@ -91,6 +133,30 @@ function ProductDetailsPage() {
                         {product.description || "No product description yet."}
                     </p>
 
+                    {availableSizes.length > 0 && (
+                        <div className="mt-6">
+                            <p className="mb-2 text-sm font-semibold text-gray-700">
+                                Size
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                {availableSizes.map((size) => (
+                                    <button
+                                        key={size}
+                                        type="button"
+                                        onClick={() => setSelectedSize(size)}
+                                        className={`rounded-lg border px-4 py-2 text-sm font-semibold ${
+                                            selectedSize === size
+                                                ? "border-pink-600 bg-pink-600 text-white"
+                                                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                                        }`}
+                                    >
+                                        {size}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="mt-8">
                         <p className="mb-2 text-sm font-semibold text-gray-700">
                             Quantity
@@ -127,10 +193,17 @@ function ProductDetailsPage() {
                             </button>
                             <button
                                 type="button"
+                                onClick={addToReservationCart}
+                                className="rounded-lg bg-pink-600 px-6 py-3 font-semibold text-white"
+                            >
+                                Add to reservation cart
+                            </button>
+                            <button
+                                type="button"
                                 onClick={() => navigate(`/messages?shopId=${encodeURIComponent(shopKey)}&shopName=${encodeURIComponent(sellerName)}`)}
                                 className="rounded-lg border border-pink-200 px-6 py-3 font-semibold text-pink-600 hover:bg-pink-50"
                             >
-                                Chat seller
+                                Chat shop
                             </button>
                         </div>
                     </div>
@@ -146,6 +219,15 @@ function ProductDetailsPage() {
                         >
                             {sellerName}
                         </button>
+
+                        {shop && (
+                            <div className="mt-3 space-y-1 text-sm text-gray-600">
+                                {shop.owner && <p>Owner: {shop.owner}</p>}
+                                {shop.email && <p>Email: {shop.email}</p>}
+                                {shop.phone && <p>Phone: {shop.phone}</p>}
+                                {shop.address && <p>Address: {shop.address}</p>}
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>

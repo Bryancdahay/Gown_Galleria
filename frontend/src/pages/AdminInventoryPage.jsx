@@ -17,7 +17,10 @@ const emptyProduct = {
     price: 0,
     image: "",
     description: "",
+    sizes: [],
 };
+
+const SIZE_OPTIONS = ["Small", "Medium", "Large"];
 
 function AdminInventoryPage() {
     const [products, setProducts] = useState([]);
@@ -62,6 +65,17 @@ function AdminInventoryPage() {
         }));
     }
 
+    function toggleSize(size) {
+        setForm((current) => {
+            const currentSizes = current.sizes || [];
+            const nextSizes = currentSizes.includes(size)
+                ? currentSizes.filter((item) => item !== size)
+                : [...currentSizes, size];
+
+            return { ...current, sizes: nextSizes };
+        });
+    }
+
     function handleImageUpload(event) {
         const file = event.target.files?.[0];
 
@@ -95,6 +109,7 @@ function AdminInventoryPage() {
             ...form,
             id: editingId || `product-${Date.now()}`,
             price: Number(form.price),
+            sizes: form.sizes || [],
             shopId: form.shopId || currentShop?.id,
             shopName: form.shopName || currentShop?.name,
         };
@@ -119,7 +134,7 @@ function AdminInventoryPage() {
 
     function handleEdit(product) {
         setEditingId(product.id);
-        setForm(product);
+        setForm({ ...product, sizes: product.sizes || [] });
         setImagePreview(product.image || "");
         setIsFormOpen(true);
     }
@@ -287,6 +302,31 @@ function AdminInventoryPage() {
                                     placeholder="Price"
                                     className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500"
                                 />
+
+                                <div>
+                                    <p className="mb-2 text-sm font-medium text-gray-700">
+                                        Available sizes
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {SIZE_OPTIONS.map((size) => {
+                                            const isSelected = (form.sizes || []).includes(size);
+                                            return (
+                                                <button
+                                                    key={size}
+                                                    type="button"
+                                                    onClick={() => toggleSize(size)}
+                                                    className={`rounded-lg border px-4 py-2 text-sm font-semibold ${
+                                                        isSelected
+                                                            ? "border-pink-600 bg-pink-600 text-white"
+                                                            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                                                    }`}
+                                                >
+                                                    {size}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
 
                                 <input
                                     type="file"

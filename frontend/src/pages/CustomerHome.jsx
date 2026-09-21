@@ -33,9 +33,6 @@ function CustomerHome() {
         <main className="mx-auto max-w-7xl px-6 py-10">
             <div className="flex flex-wrap items-end justify-between gap-5">
                 <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-pink-600">
-                        Customer home
-                    </p>
                     <h1 className="mt-2 text-4xl font-bold text-gray-900">
                         Find your perfect gown
                     </h1>

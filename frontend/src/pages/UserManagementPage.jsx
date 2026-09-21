@@ -1,22 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
     addAuditEntry,
     getUsers,
     saveUsers,
 } from "../data/catalog";
+import { deleteRemoteUser } from "../api";
 import { showToast } from "../utils/toast";
 
 const emptyUser = {
     id: "",
     name: "",
     email: "",
+    phone: "",
+    address: "",
     password: "",
     confirmPassword: "",
+    avatar: "",
 };
 
 function UserManagementPage() {
-    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    const currentUser = JSON.parse(sessionStorage.getItem("user") || "null");
     const isSuperAdmin = currentUser?.role === "super-admin";
     const roleLabel = isSuperAdmin ? "Super admin" : "Shop admin";
     const targetRole = "customer";
@@ -28,6 +32,14 @@ function UserManagementPage() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [deleteCandidate, setDeleteCandidate] = useState(null);
     const [formError, setFormError] = useState("");
+    const modalBodyRef = useRef(null);
+
+    function showFormError(message) {
+        setFormError(message);
+        if (modalBodyRef.current) {
+            modalBodyRef.current.scrollTop = 0;
+        }
+    }
 
     useEffect(() => {
         const allUsers = getUsers();
@@ -51,26 +63,54 @@ function UserManagementPage() {
         }));
     }
 
+    function handleAvatarChange(event) {
+        const file = event.target.files[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                showFormError("Profile image size must be less than 2MB.");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setForm((current) => ({ ...current, avatar: reader.result }));
+                setFormError("");
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
     function handleSubmit(event) {
         event.preventDefault();
 
         const trimmedName = form.name.trim();
         const trimmedEmail = form.email.trim();
+        const trimmedPhone = form.phone.trim();
+        const trimmedAddress = form.address.trim();
         const trimmedPassword = form.password.trim();
         const trimmedConfirmPassword = form.confirmPassword.trim();
 
         if (!trimmedName) {
-            setFormError("Full name is required.");
+            showFormError("Full name is required.");
             return;
         }
 
         if (!trimmedEmail) {
-            setFormError("Email is required.");
+            showFormError("Email is required.");
+            return;
+        }
+
+        if (!trimmedPhone) {
+            showFormError("Phone number is required.");
+            return;
+        }
+
+        if (!trimmedAddress) {
+            showFormError("Address is required.");
             return;
         }
 
         if (!editingId && !trimmedPassword) {
-            setFormError("Password is required.");
+            showFormError("Password is required.");
             return;
         }
 
@@ -78,7 +118,7 @@ function UserManagementPage() {
 
         if (trimmedPassword || trimmedConfirmPassword) {
             if (trimmedPassword !== trimmedConfirmPassword) {
-                setFormError("Passwords do not match.");
+                showFormError("Passwords do not match.");
                 return;
             }
         }
@@ -91,7 +131,7 @@ function UserManagementPage() {
             );
 
             if (exists) {
-                setFormError("Email is already taken.");
+                showFormError("Email is already taken.");
                 return;
             }
 
@@ -102,7 +142,10 @@ function UserManagementPage() {
                           ...user,
                           name: trimmedName,
                           email: trimmedEmail,
+                          phone: trimmedPhone,
+                          address: trimmedAddress,
                           password: trimmedPassword || user.password,
+                          avatar: form.avatar !== undefined ? form.avatar : user.avatar,
                       }
                     : user
             );
@@ -120,7 +163,7 @@ function UserManagementPage() {
             );
 
             if (emailExists) {
-                setFormError("Email is already taken.");
+                showFormError("Email is already taken.");
                 return;
             }
 
@@ -128,8 +171,11 @@ function UserManagementPage() {
                 id: `user-${Date.now()}`,
                 name: trimmedName,
                 email: trimmedEmail,
+                phone: trimmedPhone,
+                address: trimmedAddress,
                 password: trimmedPassword,
                 role: targetRole,
+                avatar: form.avatar || "",
             };
 
             const nextUsers = [...allUsers, newUser];
@@ -152,8 +198,11 @@ function UserManagementPage() {
             id: user.id,
             name: user.name,
             email: user.email,
+            phone: user.phone || "",
+            address: user.address || "",
             password: user.password,
             confirmPassword: user.password,
+            avatar: user.avatar || "",
         });
         setIsFormOpen(true);
     }
@@ -184,6 +233,7 @@ function UserManagementPage() {
         const nextUsers = getUsers().filter((user) => user.id !== deleteCandidate.id);
         saveUsers(nextUsers);
         updateUsersList();
+        deleteRemoteUser(deleteCandidate.email);
         addAuditEntry(
             `Deleted ${entityLabel} user`,
             `${deleteCandidate.name || "User"} was deleted.`
@@ -229,9 +279,25 @@ function UserManagementPage() {
                                 key={user.id}
                                 className="flex items-center justify-between gap-4 rounded-2xl border border-gray-200 p-4"
                             >
-                                <div>
-                                    <p className="font-semibold text-gray-900">{user.name}</p>
-                                    <p className="text-sm text-gray-500">{user.email}</p>
+                                <div className="flex items-center gap-3">
+                                    {user.avatar ? (
+                                        <img
+                                            src={user.avatar}
+                                            alt={user.name}
+                                            className="h-11 w-11 rounded-full object-cover ring-1 ring-gray-200"
+                                        />
+                                    ) : (
+                                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-pink-100 font-bold text-pink-700">
+                                            {user.name?.charAt(0)?.toUpperCase() || "U"}
+                                        </div>
+                                    )}
+                                    <div>
+                                        <p className="font-semibold text-gray-900">{user.name}</p>
+                                        <p className="text-sm text-gray-500">{user.email}</p>
+                                        {user.phone && (
+                                            <p className="text-sm text-gray-500">{user.phone}</p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="flex items-center gap-3">
@@ -272,7 +338,7 @@ function UserManagementPage() {
                             </button>
                         </div>
 
-                        <div className="max-h-[70vh] overflow-y-auto pr-1">
+                        <div className="max-h-[70vh] overflow-y-auto pr-1" ref={modalBodyRef}>
                             {formError && (
                                 <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                                     {formError}
@@ -280,6 +346,28 @@ function UserManagementPage() {
                             )}
 
                             <form onSubmit={handleSubmit} className="space-y-4">
+                                <div className="flex flex-col items-center justify-center gap-2">
+                                    {form.avatar ? (
+                                        <img
+                                            src={form.avatar}
+                                            alt="Preview"
+                                            className="h-20 w-20 rounded-full object-cover ring-2 ring-pink-500"
+                                        />
+                                    ) : (
+                                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-pink-100 text-xl font-bold text-pink-600">
+                                            {form.name ? form.name.charAt(0).toUpperCase() : "U"}
+                                        </div>
+                                    )}
+                                    <label className="cursor-pointer text-sm font-semibold text-pink-600 hover:text-pink-700">
+                                        <span>Upload profile picture</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleAvatarChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                </div>
                                 <div>
                                     <label className="mb-2 block text-sm font-medium text-gray-700">
                                         Full name
@@ -303,6 +391,33 @@ function UserManagementPage() {
                                         value={form.email}
                                         onChange={handleChange}
                                         placeholder="Email"
+                                        className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                                        Phone number
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        name="phone"
+                                        value={form.phone}
+                                        onChange={handleChange}
+                                        placeholder="Phone number"
+                                        className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                                        Address
+                                    </label>
+                                    <input
+                                        name="address"
+                                        value={form.address}
+                                        onChange={handleChange}
+                                        placeholder="Address"
                                         className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500"
                                     />
                                 </div>

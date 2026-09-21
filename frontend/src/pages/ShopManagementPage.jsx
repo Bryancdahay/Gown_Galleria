@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
     addAuditEntry,
@@ -7,6 +7,7 @@ import {
     saveShops,
     saveUsers,
 } from "../data/catalog";
+import { deleteRemoteUser } from "../api";
 import { showToast } from "../utils/toast";
 
 const emptyShop = {
@@ -18,16 +19,25 @@ const emptyShop = {
     confirmPassword: "",
     phone: "",
     address: "",
+    avatar: "",
 };
 
 function ShopManagementPage() {
-    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    const currentUser = JSON.parse(sessionStorage.getItem("user") || "null");
     const [shops, setShops] = useState([]);
     const [form, setForm] = useState(emptyShop);
     const [editingId, setEditingId] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [deleteCandidate, setDeleteCandidate] = useState(null);
     const [formError, setFormError] = useState("");
+    const modalBodyRef = useRef(null);
+
+    function showFormError(message) {
+        setFormError(message);
+        if (modalBodyRef.current) {
+            modalBodyRef.current.scrollTop = 0;
+        }
+    }
 
     useEffect(() => {
         setShops(getShops());
@@ -45,6 +55,22 @@ function ShopManagementPage() {
         }));
     }
 
+    function handleAvatarChange(event) {
+        const file = event.target.files[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                showFormError("Profile image size must be less than 2MB.");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setForm((current) => ({ ...current, avatar: reader.result }));
+                setFormError("");
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
     function handleSubmit(event) {
         event.preventDefault();
 
@@ -57,18 +83,23 @@ function ShopManagementPage() {
         const trimmedAddress = form.address.trim();
 
         if (!trimmedName || !trimmedOwner || !trimmedEmail || !trimmedAddress) {
-            setFormError("Shop name, shop admin full name, email, and address are required.");
+            showFormError("Shop name, shop admin full name, email, and address are required.");
+            return;
+        }
+
+        if (!trimmedPhone) {
+            showFormError("Phone number is required.");
             return;
         }
 
         if (!editingId && !trimmedPassword) {
-            setFormError("Password is required when creating a shop admin account.");
+            showFormError("Password is required when creating a shop admin account.");
             return;
         }
 
         if (trimmedPassword || trimmedConfirmPassword) {
             if (trimmedPassword !== trimmedConfirmPassword) {
-                setFormError("Passwords do not match.");
+                showFormError("Passwords do not match.");
                 return;
             }
         }
@@ -85,7 +116,7 @@ function ShopManagementPage() {
             );
 
             if (exists) {
-                setFormError("Email is already taken by another shop admin account.");
+                showFormError("Email is already taken by another shop admin account.");
                 return;
             }
 
@@ -98,6 +129,7 @@ function ShopManagementPage() {
                           email: trimmedEmail,
                           phone: trimmedPhone,
                           address: trimmedAddress,
+                          avatar: form.avatar !== undefined ? form.avatar : item.avatar,
                       }
                     : item
             );
@@ -112,6 +144,9 @@ function ShopManagementPage() {
                     name: trimmedOwner,
                     email: trimmedEmail,
                     password: trimmedPassword || user.password,
+                    phone: trimmedPhone,
+                    address: trimmedAddress,
+                    avatar: form.avatar !== undefined ? form.avatar : user.avatar,
                 };
             });
 
@@ -129,7 +164,7 @@ function ShopManagementPage() {
             );
 
             if (emailExists) {
-                setFormError("Email is already taken by another account.");
+                showFormError("Email is already taken by another account.");
                 return;
             }
 
@@ -139,6 +174,9 @@ function ShopManagementPage() {
                 email: trimmedEmail,
                 password: trimmedPassword,
                 role: "shop-admin",
+                phone: trimmedPhone,
+                address: trimmedAddress,
+                avatar: form.avatar || "",
             };
 
             const newShop = {
@@ -149,6 +187,7 @@ function ShopManagementPage() {
                 phone: trimmedPhone,
                 address: trimmedAddress,
                 adminUserId: newUser.id,
+                avatar: form.avatar || "",
             };
 
             const nextShops = [...allShops, newShop];
@@ -170,6 +209,9 @@ function ShopManagementPage() {
     function handleEdit(shop) {
         setEditingId(shop.id);
         setFormError("");
+        const allUsers = getUsers();
+        const adminUser = allUsers.find((u) => u.id === shop.adminUserId);
+
         setForm({
             id: shop.id,
             name: shop.name,
@@ -177,8 +219,9 @@ function ShopManagementPage() {
             email: shop.email,
             password: "",
             confirmPassword: "",
-            phone: shop.phone,
-            address: shop.address,
+            phone: shop.phone || "",
+            address: shop.address || "",
+            avatar: shop.avatar || adminUser?.avatar || "",
         });
         setIsFormOpen(true);
     }
@@ -207,8 +250,11 @@ function ShopManagementPage() {
         }
 
         const nextShops = getShops().filter((shop) => shop.id !== deleteCandidate.id);
+        const nextUsers = getUsers().filter((user) => user.id !== deleteCandidate.adminUserId);
         saveShops(nextShops);
+        saveUsers(nextUsers);
         updateShopsList();
+        deleteRemoteUser(deleteCandidate.email);
         addAuditEntry("Deleted shop", `${deleteCandidate.name} was deleted.`);
         showToast("Shop deleted successfully.");
         setDeleteCandidate(null);
@@ -249,10 +295,23 @@ function ShopManagementPage() {
                                 key={shop.id}
                                 className="flex items-center justify-between gap-4 rounded-2xl border border-gray-200 p-4"
                             >
-                                <div>
-                                    <p className="font-semibold text-gray-900">{shop.name}</p>
-                                    <p className="text-sm text-gray-500">{shop.owner}</p>
-                                    <p className="text-sm text-gray-500">{shop.email}</p>
+                                <div className="flex items-center gap-3">
+                                    {shop.avatar ? (
+                                        <img
+                                            src={shop.avatar}
+                                            alt={shop.name}
+                                            className="h-11 w-11 rounded-full object-cover ring-1 ring-gray-200"
+                                        />
+                                    ) : (
+                                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-pink-100 font-bold text-pink-700">
+                                            {shop.name?.charAt(0)?.toUpperCase() || "S"}
+                                        </div>
+                                    )}
+                                    <div>
+                                        <p className="font-semibold text-gray-900">{shop.name}</p>
+                                        <p className="text-sm text-gray-500">{shop.owner}</p>
+                                        <p className="text-sm text-gray-500">{shop.email}</p>
+                                    </div>
                                 </div>
 
                                 <div className="flex items-center gap-3">
@@ -293,7 +352,7 @@ function ShopManagementPage() {
                             </button>
                         </div>
 
-                        <div className="max-h-[70vh] overflow-y-auto pr-1">
+                        <div className="max-h-[70vh] overflow-y-auto pr-1" ref={modalBodyRef}>
                             {formError && (
                                 <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                                     {formError}
@@ -301,6 +360,28 @@ function ShopManagementPage() {
                             )}
 
                             <form onSubmit={handleSubmit} className="space-y-4">
+                                <div className="flex flex-col items-center justify-center gap-2">
+                                    {form.avatar ? (
+                                        <img
+                                            src={form.avatar}
+                                            alt="Preview"
+                                            className="h-20 w-20 rounded-full object-cover ring-2 ring-pink-500"
+                                        />
+                                    ) : (
+                                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-pink-100 text-xl font-bold text-pink-600">
+                                            {form.name ? form.name.charAt(0).toUpperCase() : "S"}
+                                        </div>
+                                    )}
+                                    <label className="cursor-pointer text-sm font-semibold text-pink-600 hover:text-pink-700">
+                                        <span>Upload shop/profile picture</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleAvatarChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                </div>
                                 <div>
                                     <label className="mb-2 block text-sm font-medium text-gray-700">
                                         Shop name

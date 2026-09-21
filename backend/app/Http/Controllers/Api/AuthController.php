@@ -74,4 +74,23 @@ class AuthController extends Controller
             'user' => $request->user(),
         ]);
     }
+
+    public function destroyByEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $user = User::where('email', $validated['email'])->first();
+
+        if ($user) {
+            $user->tokens()->delete();
+            $user->delete();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Account deleted.',
+        ]);
+    }
 }

@@ -10,7 +10,6 @@ import { showToast } from "../utils/toast";
 
 const emptyCategory = {
     id: "",
-    slug: "",
     title: "",
     image: "",
     description: "",
@@ -69,11 +68,6 @@ function CategoryManagementPage() {
         const nextCategory = {
             ...form,
             id: editingId || `category-${Date.now()}`,
-            slug: (form.slug || form.title)
-                .toLowerCase()
-                .trim()
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/^-|-$/g, ""),
             title: form.title.trim(),
             description: form.description.trim(),
             image: form.image || "",
@@ -178,18 +172,13 @@ function CategoryManagementPage() {
                         categories.map((category) => (
                             <div
                                 key={category.id}
-                                className="flex items-center gap-4 rounded-2xl border border-gray-200 p-3"
+                                className="flex items-center gap-160 rounded-2xl border border-gray-200 p-3"
                             >
                             <img
                                 src={category.image || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80"}
                                 alt={category.title}
                                 className="h-16 w-16 rounded-xl object-cover"
                             />
-
-                            <div className="flex-1">
-                                <p className="font-semibold text-gray-900">{category.title}</p>
-                                <p className="text-sm text-gray-500">/{category.slug}</p>
-                            </div>
 
                                 <div className="flex gap-2">
                                     <button
@@ -240,19 +229,6 @@ function CategoryManagementPage() {
                                     value={form.title}
                                     onChange={handleChange}
                                     placeholder="Category name"
-                                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700">
-                                    Category slug
-                                </label>
-                                <input
-                                    name="slug"
-                                    value={form.slug}
-                                    onChange={handleChange}
-                                    placeholder="Category slug"
                                     className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-pink-500"
                                 />
                             </div>

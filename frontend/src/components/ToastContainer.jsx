@@ -38,7 +38,7 @@ function ToastContainer() {
     return (
         <div className="pointer-events-none fixed inset-x-0 top-5 z-[9999] flex justify-center px-4">
             <div
-                className={`max-w-md rounded-2xl border px-4 py-3 shadow-lg backdrop-blur-sm ${palette[toast.type] || palette.success}`}
+                className={`toast-pop-in max-w-md rounded-2xl border px-4 py-3 shadow-lg backdrop-blur-sm ${palette[toast.type] || palette.success}`}
                 role="status"
                 aria-live="polite"
             >

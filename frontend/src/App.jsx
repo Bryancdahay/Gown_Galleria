@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import ToastContainer from "./components/ToastContainer";
+import { clearSession, isSessionValid } from "./data/catalog";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -10,7 +11,9 @@ import CustomerHome from "./pages/CustomerHome";
 import ProductDetailsPage from "./pages/ProductDetailsPage";
 import ShopPage from "./pages/ShopPage";
 import CartPage from "./pages/CartPage";
+import ReservationCartPage from "./pages/ReservationCartPage";
 import MessagesPage from "./pages/MessagesPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import ProfilePage from "./pages/ProfilePage";
 import DashboardPage from "./pages/DashboardPage";
 import AdminInventoryPage from "./pages/AdminInventoryPage";
@@ -21,9 +24,14 @@ import UserManagementPage from "./pages/UserManagementPage";
 import ShopManagementPage from "./pages/ShopManagementPage";
 
 function ProtectedRoute({ children }) {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     if (!token) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (!isSessionValid()) {
+        clearSession();
         return <Navigate to="/login" replace />;
     }
 
@@ -31,8 +39,8 @@ function ProtectedRoute({ children }) {
 }
 
 function PublicOnlyRoute({ children }) {
-    const token = localStorage.getItem("token");
-    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    const token = sessionStorage.getItem("token");
+    const storedUser = JSON.parse(sessionStorage.getItem("user") || "null");
 
     if (token) {
         return (
@@ -47,10 +55,15 @@ function PublicOnlyRoute({ children }) {
 }
 
 function ShopAdminOnlyRoute({ children }) {
-    const token = localStorage.getItem("token");
-    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    const token = sessionStorage.getItem("token");
+    const storedUser = JSON.parse(sessionStorage.getItem("user") || "null");
 
     if (!token) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (!isSessionValid()) {
+        clearSession();
         return <Navigate to="/login" replace />;
     }
 
@@ -62,10 +75,15 @@ function ShopAdminOnlyRoute({ children }) {
 }
 
 function SuperAdminOnlyRoute({ children }) {
-    const token = localStorage.getItem("token");
-    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    const token = sessionStorage.getItem("token");
+    const storedUser = JSON.parse(sessionStorage.getItem("user") || "null");
 
     if (!token) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (!isSessionValid()) {
+        clearSession();
         return <Navigate to="/login" replace />;
     }
 
@@ -127,6 +145,15 @@ function App() {
                     />
 
                     <Route
+                        path="/reservation-cart"
+                        element={
+                            <ProtectedRoute>
+                                <ReservationCartPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
                         path="/products/:productId"
                         element={
                             <ProtectedRoute>
@@ -149,6 +176,15 @@ function App() {
                         element={
                             <ProtectedRoute>
                                 <MessagesPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/notifications"
+                        element={
+                            <ProtectedRoute>
+                                <NotificationsPage />
                             </ProtectedRoute>
                         }
                     />

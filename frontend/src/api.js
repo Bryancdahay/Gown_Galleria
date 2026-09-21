@@ -12,6 +12,27 @@ export async function testApi() {
     return response.json();
 }
 
+// Best-effort removal from the real backend so deleted accounts can't fall back to a DB login.
+export async function deleteRemoteUser(email) {
+    if (!email) {
+        return;
+    }
+
+    try {
+        await fetch(`${API_URL}/users`, {
+            method: "DELETE",
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({ email }),
+        });
+    } catch {
+        // Backend may be offline; the local account removal already blocks login.
+    }
+}
+
 export async function registerUser(userData) {
     ensureSeededStorage();
 
@@ -29,8 +50,11 @@ export async function registerUser(userData) {
         id: `user-${Date.now()}`,
         name: (userData.name || "").trim(),
         email: trimmedEmail,
+        phone: (userData.phone || "").trim(),
+        address: (userData.address || "").trim(),
         password: userData.password,
         role: "customer",
+        avatar: userData.avatar || "",
     };
 
     saveUsers([...localUsers, newUser]);
@@ -101,38 +125,58 @@ export async function loginUser(credentials) {
 }
 
 export async function getCurrentUser() {
-    const token = localStorage.getItem("token");
+    ensureSeededStorage();
+    const token = sessionStorage.getItem("token");
 
     if (!token) {
         return null;
     }
 
-    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    const storedUser = JSON.parse(sessionStorage.getItem("user") || "null");
+    const users = getUsers();
+    const localUser = users.find(
+        (u) => u.id === storedUser?.id || u.email?.toLowerCase() === storedUser?.email?.toLowerCase()
+    );
+
+    const effectiveAvatar = storedUser?.avatar || localUser?.avatar || "";
+    const mergedUser = localUser
+        ? { ...localUser, ...storedUser, avatar: effectiveAvatar }
+        : storedUser || null;
 
     if (token.startsWith("local-")) {
-        return storedUser || null;
+        return mergedUser;
     }
 
-    const response = await fetch(`${API_URL}/user`, {
-        method: "GET",
-        headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-        },
-        credentials: "include",
-    });
+    try {
+        const response = await fetch(`${API_URL}/user`, {
+            method: "GET",
+            headers: {
+                Accept: "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            credentials: "include",
+        });
 
-    if (!response.ok) {
-        return storedUser || null;
+        if (!response.ok) {
+            return mergedUser;
+        }
+
+        const data = await response.json();
+        const apiUser = data.user;
+
+        return {
+            ...apiUser,
+            ...localUser,
+            ...storedUser,
+            avatar: storedUser?.avatar || localUser?.avatar || apiUser?.avatar || "",
+        };
+    } catch {
+        return mergedUser;
     }
-
-    const data = await response.json();
-
-    return data.user || storedUser || null;
 }
 
 export async function logoutUser() {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     const response = await fetch(`${API_URL}/logout`, {
         method: "POST",

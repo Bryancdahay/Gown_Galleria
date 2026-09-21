@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
     getAuditTrail,
     getCurrentShop,
@@ -6,19 +7,43 @@ import {
 } from "../data/catalog";
 
 function AuditReportPage() {
-    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    const currentUser = JSON.parse(sessionStorage.getItem("user") || "null");
     const currentShop = getCurrentShop();
-    const auditTrail = currentShop
-        ? getAuditTrail("shop-admin", currentShop.id)
-        : currentUser?.role === "shop-admin"
-            ? []
-            : getAuditTrail(currentUser?.role);
-    const users = getUsers();
-    const products = currentShop
-        ? getProducts().filter((product) => product.shopId === currentShop.id)
-        : currentUser?.role === "shop-admin"
-            ? []
-            : getProducts();
+
+    const [auditTrail, setAuditTrail] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [products, setProducts] = useState([]);
+
+    const fetchReportData = () => {
+        const trail = currentShop
+            ? getAuditTrail("shop-admin", currentShop.id)
+            : currentUser?.role === "shop-admin"
+                ? []
+                : getAuditTrail(currentUser?.role);
+        setAuditTrail(trail);
+
+        setUsers(getUsers());
+
+        const prods = currentShop
+            ? getProducts().filter((product) => product.shopId === currentShop.id)
+            : currentUser?.role === "shop-admin"
+                ? []
+                : getProducts();
+        setProducts(prods);
+    };
+
+    useEffect(() => {
+        fetchReportData();
+
+        const handleUpdate = () => fetchReportData();
+        window.addEventListener("audit:updated", handleUpdate);
+        window.addEventListener("storage", handleUpdate);
+
+        return () => {
+            window.removeEventListener("audit:updated", handleUpdate);
+            window.removeEventListener("storage", handleUpdate);
+        };
+    }, []);
 
     const grouped = auditTrail.reduce((acc, entry) => {
         acc[entry.action] = (acc[entry.action] || 0) + 1;

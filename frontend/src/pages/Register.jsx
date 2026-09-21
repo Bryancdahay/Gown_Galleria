@@ -10,13 +10,21 @@ function Register() {
     const [formData, setFormData] = useState({
         name: "",
         email: "",
+        phone: "",
+        address: "",
         password: "",
         password_confirmation: "",
+        avatar: "",
     });
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+
+    function showError(message) {
+        setError(message);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
 
     function handleChange(event) {
         setFormData({
@@ -25,15 +33,56 @@ function Register() {
         });
     }
 
+    function handleAvatarChange(event) {
+        const file = event.target.files[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                showError("Profile image size must be less than 2MB.");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData((prev) => ({ ...prev, avatar: reader.result }));
+                setError("");
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
     async function handleSubmit(event) {
         event.preventDefault();
         if (!formData.name.trim()) {
-            setError("Full name is required.");
+            showError("Full name is required.");
+            return;
+        }
+
+        if (!formData.email.trim()) {
+            showError("Email is required.");
+            return;
+        }
+
+        if (!formData.phone.trim()) {
+            showError("Phone number is required.");
+            return;
+        }
+
+        if (!formData.address.trim()) {
+            showError("Address is required.");
+            return;
+        }
+
+        if (!formData.password.trim()) {
+            showError("Password is required.");
+            return;
+        }
+
+        if (!formData.password_confirmation.trim()) {
+            showError("Confirm password is required.");
             return;
         }
 
         if (formData.password !== formData.password_confirmation) {
-            setError("Passwords do not match.");
+            showError("Passwords do not match.");
             return;
         }
         setLoading(true);
@@ -54,22 +103,22 @@ function Register() {
                 const errors = error.response.data.errors;
 
                 if (errors.email) {
-                    setError("Email is already taken.");
+                    showError("Email is already taken.");
                     return;
                 }
 
                 if (errors.name) {
-                    setError("Full name is required.");
+                    showError("Full name is required.");
                     return;
                 }
 
                 const firstError = Object.values(errors)[0]?.[0];
 
-                setError(firstError || "Registration failed.");
+                showError(firstError || "Registration failed.");
             } else if (error.message) {
-                setError(error.message);
+                showError(error.message);
             } else {
-                setError("Registration failed.");
+                showError("Registration failed.");
             }
         } finally {
             setLoading(false);
@@ -106,6 +155,28 @@ function Register() {
                     onSubmit={handleSubmit}
                     className="mt-8 space-y-5"
                 >
+                    <div className="flex flex-col items-center justify-center gap-3">
+                        {formData.avatar ? (
+                            <img
+                                src={formData.avatar}
+                                alt="Avatar preview"
+                                className="h-24 w-24 rounded-full object-cover ring-2 ring-pink-500"
+                            />
+                        ) : (
+                            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-pink-100 text-2xl font-bold text-pink-600">
+                                {formData.name ? formData.name.charAt(0).toUpperCase() : "U"}
+                            </div>
+                        )}
+                        <label className="cursor-pointer text-sm font-semibold text-pink-600 hover:text-pink-700">
+                            <span>Upload profile picture</span>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleAvatarChange}
+                                className="hidden"
+                            />
+                        </label>
+                    </div>
                     <div>
                         <label className="mb-2 block text-sm font-medium text-gray-700">
                             Name
@@ -133,6 +204,38 @@ function Register() {
                             value={formData.email}
                             onChange={handleChange}
                             placeholder="you@example.com"
+                            required
+                            className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
+                            Phone number
+                        </label>
+
+                        <input
+                            type="tel"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            placeholder="09XX XXX XXXX"
+                            required
+                            className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
+                            Address
+                        </label>
+
+                        <input
+                            type="text"
+                            name="address"
+                            value={formData.address}
+                            onChange={handleChange}
+                            placeholder="Your address"
                             required
                             className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
                         />

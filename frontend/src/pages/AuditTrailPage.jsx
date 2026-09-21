@@ -1,13 +1,33 @@
+import { useEffect, useState } from "react";
 import { getAuditTrail, getCurrentShop } from "../data/catalog";
 
 function AuditTrailPage() {
-    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    const currentUser = JSON.parse(sessionStorage.getItem("user") || "null");
     const currentShop = getCurrentShop();
-    const auditTrail = currentShop
-        ? getAuditTrail("shop-admin", currentShop.id)
-        : currentUser?.role === "shop-admin"
-            ? []
-            : getAuditTrail(currentUser?.role);
+
+    const [auditTrail, setAuditTrail] = useState([]);
+
+    const fetchAuditTrail = () => {
+        const trail = currentShop
+            ? getAuditTrail("shop-admin", currentShop.id)
+            : currentUser?.role === "shop-admin"
+                ? []
+                : getAuditTrail(currentUser?.role);
+        setAuditTrail(trail);
+    };
+
+    useEffect(() => {
+        fetchAuditTrail();
+
+        const handleUpdate = () => fetchAuditTrail();
+        window.addEventListener("audit:updated", handleUpdate);
+        window.addEventListener("storage", handleUpdate);
+
+        return () => {
+            window.removeEventListener("audit:updated", handleUpdate);
+            window.removeEventListener("storage", handleUpdate);
+        };
+    }, []);
 
     return (
         <main className="mx-auto max-w-7xl px-6 py-16">
