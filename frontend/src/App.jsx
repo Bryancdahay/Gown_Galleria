@@ -22,6 +22,7 @@ import AuditTrailPage from "./pages/AuditTrailPage";
 import AuditReportPage from "./pages/AuditReportPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import ShopManagementPage from "./pages/ShopManagementPage";
+import FeedbacksPage from "./pages/FeedbacksPage";
 
 function ProtectedRoute({ children }) {
     const token = sessionStorage.getItem("token");
@@ -233,6 +234,17 @@ function App() {
                             <ProtectedRoute>
                                 <ShopAdminOnlyRoute>
                                     <CategoryManagementPage />
+                                </ShopAdminOnlyRoute>
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/admin/feedbacks"
+                        element={
+                            <ProtectedRoute>
+                                <ShopAdminOnlyRoute>
+                                    <FeedbacksPage />
                                 </ShopAdminOnlyRoute>
                             </ProtectedRoute>
                         }

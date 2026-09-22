@@ -57,7 +57,7 @@ function AuditReportPage() {
                     {currentUser?.role === "super-admin" ? "Super admin" : "Shop admin"}
                 </p>
                 <h1 className="mt-2 text-4xl font-bold text-gray-900">
-                    Audit report
+                    Report
                 </h1>
             </div>
 

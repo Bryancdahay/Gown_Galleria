@@ -302,6 +302,13 @@ function Navbar() {
                                         >
                                             Category management
                                         </Link>
+
+                                        <Link
+                                            to="/admin/feedbacks"
+                                            className={getSidebarLinkClass("/admin/feedbacks")}
+                                        >
+                                            Customer Feedbacks &amp; Ratings
+                                        </Link>
                                     </>
                                 )}
 
@@ -336,7 +343,7 @@ function Navbar() {
                                             to="/admin/audit-report"
                                             className={getSidebarLinkClass("/admin/audit-report")}
                                         >
-                                            Audit report
+                                            Report
                                         </Link>
                                     </>
                                 )}

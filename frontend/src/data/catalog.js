@@ -10,6 +10,7 @@ export const RESET_KEY = "gownGalleriaFreshReset20260919";
 export const LAST_CART_OWNER_KEY = "gownGalleriaLastCartOwner";
 export const SHOP_APPLICATIONS_KEY = "gownGalleriaShopApplications";
 export const NOTIFICATIONS_KEY = "gownGalleriaNotifications";
+export const RATINGS_KEY = "gownGalleriaRatings";
 
 const defaultUsers = [
     {
@@ -642,3 +643,56 @@ export function convertToShopOwner(applicationId) {
     return updatedUser;
 }
 
+// ─── Ratings & Feedbacks ──────────────────────────────────────────────────────
+// Each rating: { id, type ("product"|"shop"), targetId, userId, userName, stars, feedback, createdAt }
+
+export function getRatings() {
+    if (typeof window === "undefined") return [];
+    return safeJSONParse(localStorage.getItem(RATINGS_KEY));
+}
+
+export function saveRatings(ratings) {
+    localStorage.setItem(RATINGS_KEY, JSON.stringify(ratings));
+    window.dispatchEvent(new Event("ratings:updated"));
+    return ratings;
+}
+
+export function getRatingsForTarget(type, targetId) {
+    return getRatings().filter(
+        (r) => r.type === type && r.targetId === targetId
+    );
+}
+
+export function getAverageRating(type, targetId) {
+    const list = getRatingsForTarget(type, targetId);
+    if (list.length === 0) return null;
+    const sum = list.reduce((acc, r) => acc + r.stars, 0);
+    return Math.round((sum / list.length) * 10) / 10;
+}
+
+export function addOrUpdateRating({ type, targetId, stars, feedback }) {
+    const storedUser = JSON.parse(sessionStorage.getItem("user") || "null");
+    if (!storedUser) return null;
+
+    const all = getRatings();
+    const newRating = {
+        id: `rating-${Date.now()}-${Math.random()}`,
+        type,
+        targetId,
+        userId: storedUser.id,
+        userName: storedUser.name || storedUser.email || "Customer",
+        stars,
+        feedback: feedback || null,
+        createdAt: new Date().toISOString(),
+    };
+
+    return saveRatings([...all, newRating]);
+}
+
+export function getUserRatingForTarget(type, targetId) {
+    const storedUser = JSON.parse(sessionStorage.getItem("user") || "null");
+    if (!storedUser) return null;
+    return getRatings().find(
+        (r) => r.type === type && r.targetId === targetId && r.userId === storedUser.id
+    ) || null;
+}
